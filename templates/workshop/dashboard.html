@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block title %}Pulpit studia – DetailFlow{% endblock %}
+
+{% block content %}
+<div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
+    <div>
+        <h1 class="text-2xl font-bold text-white tracking-tight">Pulpit studia</h1>
+        <p class="text-sm text-gray-400 mt-1">Zlecenia detailingowe, status hali i pojazdy gotowe do wydania.</p>
+    </div>
+    <a href="{% url 'order_create' %}"
+       class="inline-flex items-center justify-center bg-blue-600 hover:bg-blue-500 text-white font-medium px-4 py-2.5 rounded-lg text-sm transition shadow">
+        + Przyjmij pojazd
+    </a>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-md">
+        <p class="text-gray-400 text-xs uppercase tracking-wider font-semibold">Wszystkie zlecenia</p>
+        <p class="text-3xl font-bold text-white mt-2">{{ total_count }}</p>
+    </div>
+    <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-md">
+        <p class="text-amber-400 text-xs uppercase tracking-wider font-semibold">W trakcie prac (hala)</p>
+        <p class="text-3xl font-bold text-amber-400 mt-2">{{ in_progress_count }}</p>
+    </div>
+    <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-md">
+        <p class="text-emerald-400 text-xs uppercase tracking-wider font-semibold">Gotowe do wydania</p>
+        <p class="text-3xl font-bold text-emerald-400 mt-2">{{ ready_count }}</p>
+    </div>
+</div>
+
+<div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden shadow-lg">
+    <div class="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
+        <h2 class="text-lg font-semibold text-white">Aktywne zlecenia detailingowe</h2>
+        <a href="{% url 'order_create' %}" class="text-xs bg-blue-600/20 text-blue-400 border border-blue-500/40 hover:bg-blue-600/30 px-3 py-1.5 rounded-lg transition font-medium">+ Dodaj zlecenie</a>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm text-gray-300">
+            <thead class="bg-gray-900/60 text-gray-400 uppercase text-xs">
+                <tr>
+                    <th class="px-6 py-3">Nr</th>
+                    <th class="px-6 py-3">Pojazd i klient</th>
+                    <th class="px-6 py-3">Pakiet usług</th>
+                    <th class="px-6 py-3">Termin</th>
+                    <th class="px-6 py-3">Wycena</th>
+                    <th class="px-6 py-3">Status</th>
+                    <th class="px-6 py-3 text-right">Akcja</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-700">
+                {% for order in orders %}
+                <tr class="hover:bg-gray-900/40 transition">
+                    <td class="px-6 py-4 font-mono font-bold text-blue-400">#{{ order.id }}</td>
+                    <td class="px-6 py-4">
+                        <div class="font-semibold text-white">{{ order.vehicle.make }} {{ order.vehicle.model }}</div>
+                        <div class="text-xs text-gray-400 mt-0.5">
+                            Rejestracja: <span class="text-gray-300 font-mono">{{ order.vehicle.license_plate }}</span>
+                            · {{ order.vehicle.owner.first_name }} {{ order.vehicle.owner.last_name }}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 font-medium">{{ order.service_name }}</td>
+                    <td class="px-6 py-4 text-gray-300 whitespace-nowrap">{{ order.scheduled_start|date:"d.m.Y H:i" }}</td>
+                    <td class="px-6 py-4">
+                        <div class="font-semibold text-white">{{ order.price_total }} PLN</div>
+                        {% if order.deposit_paid %}
+                            <div class="text-xs text-gray-500">Zadatek: {{ order.deposit_paid }} PLN</div>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if order.status == 'READY' %}
+                            <span class="bg-emerald-950 text-emerald-300 border border-emerald-600 px-2.5 py-1 rounded text-xs font-semibold">Gotowy do odbioru</span>
+                        {% elif order.status == 'IN_PROGRESS' %}
+                            <span class="bg-amber-950 text-amber-300 border border-amber-600 px-2.5 py-1 rounded text-xs font-semibold">W trakcie</span>
+                        {% elif order.status == 'COMPLETED' %}
+                            <span class="bg-gray-800 text-gray-400 border border-gray-600 px-2.5 py-1 rounded text-xs">Wydane</span>
+                        {% elif order.status == 'CANCELLED' %}
+                            <span class="bg-red-950 text-red-300 border border-red-700 px-2.5 py-1 rounded text-xs">Anulowane</span>
+                        {% else %}
+                            <span class="bg-blue-950 text-blue-300 border border-blue-600 px-2.5 py-1 rounded text-xs">{{ order.get_status_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        {% if order.status != 'READY' and order.status != 'COMPLETED' and order.status != 'CANCELLED' %}
+                            <a href="{% url 'mark_order_ready' order.id %}"
+                               class="inline-block bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition shadow">
+                                Wydaj auto (Mailpit)
+                            </a>
+                        {% else %}
+                            <span class="text-xs text-gray-500 italic">Powiadomiono</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="px-6 py-12 text-center">
+                        <p class="text-gray-300 font-medium">Brak zarejestrowanych zleceń w bazie.</p>
+                        <p class="text-sm text-gray-500 mt-1">Kliknij „Przyjmij pojazd”, aby dodać pierwsze zlecenie.</p>
+                        <a href="{% url 'order_create' %}" class="inline-block mt-4 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">+ Przyjmij auto</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
