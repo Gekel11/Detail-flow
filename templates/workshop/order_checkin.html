@@ -1,0 +1,661 @@
+{% extends 'base.html' %}
+
+{% block title %}Wjazd na halę — Pomiar i Inspekcja #{{ order.id|stringformat:"03d" }}{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+    <div class="border-b border-stone-800 pb-4 flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+        <div>
+            <p class="text-xs font-mono uppercase tracking-widest text-amber-accent">// PROCEDURA WJAZDU NA STANOWISKO</p>
+            <h1 class="text-2xl font-display font-bold uppercase text-white mt-1">
+                Wstępna inspekcja karoserii i powłoki
+            </h1>
+            <p class="text-xs font-mono text-stone-400 mt-1">
+                {{ order.vehicle.make }} {{ order.vehicle.model }} · <span class="text-amber-accent font-bold">{{ order.vehicle.license_plate }}</span> · Właściciel: {{ order.vehicle.owner.first_name }} {{ order.vehicle.owner.last_name }}
+            </p>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="text-[10px] font-mono text-stone-500 block uppercase">Profil auta:</span>
+            <span class="text-xs font-mono text-amber-accent bg-stone-900 border border-stone-700 px-2.5 py-1 uppercase font-bold" id="badge-body-type">
+                {{ order.vehicle.get_body_type_display|default:order.vehicle.body_type }}
+            </span>
+        </div>
+    </div>
+
+    <!-- 1. Pełna Cyfrowa Mapa Karoserii (5 Rzutów) -->
+    <div class="border border-stone-800 bg-stone-900 p-6 space-y-4">
+
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-stone-800 pb-3">
+            <div>
+                <h2 class="text-sm font-mono font-bold uppercase text-white">1. Diagram uszkodzeń nadwozia (5 rzutów)</h2>
+                <p class="text-[11px] font-mono text-stone-500 mt-0.5">Kliknij bezpośrednio na wybrany element (przód, tył, boki, góra), aby postawić znacznik wady.</p>
+            </div>
+
+            <!-- Kontrolki: Wybór szablonu + Przycisk AI -->
+            <div class="flex flex-wrap items-center gap-2">
+                <button type="button"
+                        onclick="requestAIBlueprint()"
+                        id="btn-ai-generate"
+                        class="bg-purple-950/60 hover:bg-purple-900 text-purple-200 border border-purple-500/50 px-3 py-1 text-xs font-mono transition flex items-center gap-1.5 cursor-pointer">
+                    <span>✨ Generuj Blueprint AI ({{ order.vehicle.make }} {{ order.vehicle.model }})</span>
+                </button>
+
+                <div class="flex items-center gap-1 bg-stone-950 p-1 border border-stone-800 font-mono text-xs">
+                    <span class="text-[10px] text-stone-500 uppercase px-1.5">Szablon:</span>
+                    <button type="button" onclick="changeBodyType('SEDAN')" id="btn-SEDAN" class="body-btn px-2 py-0.5 transition text-stone-400 hover:text-white">Sedan</button>
+                    <button type="button" onclick="changeBodyType('COUPE')" id="btn-COUPE" class="body-btn px-2 py-0.5 transition text-stone-400 hover:text-white">Coupe</button>
+                    <button type="button" onclick="changeBodyType('SUV')" id="btn-SUV" class="body-btn px-2 py-0.5 transition text-stone-400 hover:text-white">SUV</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+
+            <!-- Plansza z 5 rzutami w SVG -->
+            <div class="lg:col-span-3 relative border border-stone-800 bg-stone-950 p-3 select-none flex items-center justify-center min-h-[480px]">
+                <div id="blueprint-board" class="relative w-full aspect-[16/10] cursor-crosshair">
+
+                    <svg id="blueprint-svg" viewBox="0 0 1000 640" class="w-full h-full select-none">
+                        <!-- Wstrzykiwane przez JS: SVG wbudowane lub wygenerowane przez Gemini -->
+                    </svg>
+
+                    <!-- Warstwa ze wszystkimi pinami -->
+                    <div id="pins-layer" class="absolute inset-0 pointer-events-auto"></div>
+                </div>
+            </div>
+
+            <!-- Panel boczny z listą wad -->
+            <div class="border border-stone-800 bg-stone-950 p-4 min-h-[480px] flex flex-col justify-between font-mono">
+                <div>
+                    <div class="flex justify-between items-center mb-3 pb-2 border-b border-stone-850">
+                        <span class="text-xs uppercase text-amber-accent font-bold">// ZAREJESTROWANE (<span id="damage-counter">0</span>)</span>
+                    </div>
+                    <ul id="damage-list" class="divide-y divide-stone-850 space-y-1.5 text-xs max-h-[380px] overflow-y-auto">
+                        <!-- Generowane w JS -->
+                    </ul>
+                </div>
+                <div class="pt-3 border-t border-stone-850 text-[10px] text-stone-500">
+                    Kliknij czerwony pin, aby usunąć punkt.
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 2. Formularz grubości lakieru -->
+    <form method="POST" class="space-y-6" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="bg-red-950/50 border border-red-900 text-red-400 p-3 text-xs font-mono">
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <div class="border border-stone-800 bg-stone-900 p-6">
+            <div class="border-b border-stone-800 pb-3 mb-6 flex justify-between items-center">
+                <div>
+                    <h2 class="text-sm font-mono font-bold uppercase text-white">2. Mapa grubości powłoki lakierniczej</h2>
+                    <p class="text-[11px] font-mono text-stone-500 mt-0.5">Podaj zakres w µm (np. 110-130) lub zaznacz N/D (tworzywo sztuczne / brak elementu).</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                <!-- Elementy poziome i zderzaki -->
+                <div class="space-y-4">
+                    <p class="text-xs font-mono text-amber-accent uppercase tracking-wider border-b border-stone-800 pb-1">Elementy poziome / Zderzaki</p>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-xs font-mono text-stone-300">Maska silnika</label>
+                            <label class="text-[10px] font-mono text-stone-500 cursor-pointer flex items-center gap-1">
+                                <input type="checkbox" class="accent-amber-accent" onchange="toggleND('id_thickness_hood', this.checked)"> N/D
+                            </label>
+                        </div>
+                        {{ form.thickness_hood }}
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-xs font-mono text-stone-300">Dach</label>
+                            <label class="text-[10px] font-mono text-stone-500 cursor-pointer flex items-center gap-1">
+                                <input type="checkbox" class="accent-amber-accent" onchange="toggleND('id_thickness_roof', this.checked)"> N/D
+                            </label>
+                        </div>
+                        {{ form.thickness_roof }}
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-xs font-mono text-stone-300">Klapa bagażnika</label>
+                            <label class="text-[10px] font-mono text-stone-500 cursor-pointer flex items-center gap-1">
+                                <input type="checkbox" class="accent-amber-accent" onchange="toggleND('id_thickness_trunk', this.checked)"> N/D
+                            </label>
+                        </div>
+                        {{ form.thickness_trunk }}
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-xs font-mono text-stone-300">Zderzak przód (tworzywo)</label>
+                            <label class="text-[10px] font-mono text-stone-500 cursor-pointer flex items-center gap-1">
+                                <input type="checkbox" class="accent-amber-accent" checked onchange="toggleND('id_thickness_bumper_front', this.checked)"> N/D
+                            </label>
+                        </div>
+                        {{ form.thickness_bumper_front }}
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-xs font-mono text-stone-300">Zderzak tył (tworzywo)</label>
+                            <label class="text-[10px] font-mono text-stone-500 cursor-pointer flex items-center gap-1">
+                                <input type="checkbox" class="accent-amber-accent" checked onchange="toggleND('id_thickness_bumper_rear', this.checked)"> N/D
+                            </label>
+                        </div>
+                        {{ form.thickness_bumper_rear }}
+                    </div>
+                </div>
+
+                <!-- Błotniki i drzwi -->
+                <div class="space-y-4">
+                    <p class="text-xs font-mono text-amber-accent uppercase tracking-wider border-b border-stone-800 pb-1">Błotniki i drzwi boczne</p>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-xs font-mono text-stone-300">Błotniki przednie (L/P)</label>
+                            <label class="text-[10px] font-mono text-stone-500 cursor-pointer flex items-center gap-1">
+                                <input type="checkbox" class="accent-amber-accent" onchange="toggleND('id_thickness_fenders_front', this.checked)"> N/D
+                            </label>
+                        </div>
+                        {{ form.thickness_fenders_front }}
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-xs font-mono text-stone-300">Błotniki tylne / słupki C</label>
+                            <label class="text-[10px] font-mono text-stone-500 cursor-pointer flex items-center gap-1">
+                                <input type="checkbox" class="accent-amber-accent" onchange="toggleND('id_thickness_fenders_rear', this.checked)"> N/D
+                            </label>
+                        </div>
+                        {{ form.thickness_fenders_rear }}
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-xs font-mono text-stone-300">Drzwi przód L</label>
+                                <label class="text-[10px] font-mono text-stone-500 cursor-pointer flex items-center gap-1">
+                                    <input type="checkbox" class="accent-amber-accent" onchange="toggleND('id_thickness_doors_fl', this.checked)"> N/D
+                                </label>
+                            </div>
+                            {{ form.thickness_doors_fl }}
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-xs font-mono text-stone-300">Drzwi przód P</label>
+                                <label class="text-[10px] font-mono text-stone-500 cursor-pointer flex items-center gap-1">
+                                    <input type="checkbox" class="accent-amber-accent" onchange="toggleND('id_thickness_doors_fr', this.checked)"> N/D
+                                </label>
+                            </div>
+                            {{ form.thickness_doors_fr }}
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-xs font-mono text-stone-300">Drzwi tył L</label>
+                                <label class="text-[10px] font-mono text-stone-500 cursor-pointer flex items-center gap-1">
+                                    <input type="checkbox" class="accent-amber-accent" onchange="toggleND('id_thickness_doors_rl', this.checked)"> N/D
+                                </label>
+                            </div>
+                            {{ form.thickness_doors_rl }}
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-xs font-mono text-stone-300">Drzwi tył P</label>
+                                <label class="text-[10px] font-mono text-stone-500 cursor-pointer flex items-center gap-1">
+                                    <input type="checkbox" class="accent-amber-accent" onchange="toggleND('id_thickness_doors_rr', this.checked)"> N/D
+                                </label>
+                            </div>
+                            {{ form.thickness_doors_rr }}
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="mt-6 pt-4 border-t border-stone-800">
+                <label class="block text-xs font-mono uppercase text-stone-400 mb-1">Dodatkowe uwagi techniczne do lakieru</label>
+                {{ form.notes }}
+            </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-2">
+            <a href="{% url 'dashboard' %}" class="text-xs font-mono text-stone-500 hover:text-stone-300 uppercase">
+                ← Anuluj i wróć do hali
+            </a>
+            <button type="submit"
+                    class="bg-amber-accent hover:bg-amber-accentHover text-stone-950 font-display font-bold text-xs uppercase tracking-wider px-6 py-3 transition shadow-lg shadow-amber-accent/10">
+                Zatwierdź protokół i wjedź na stanowisko →
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Modal uszkodzenia -->
+<dialog id="damage-dialog" class="bg-stone-900 border border-stone-700 text-white p-6 backdrop:bg-stone-950/80 max-w-sm w-full font-mono">
+    <h3 class="text-xs uppercase font-bold text-amber-accent mb-1">// Rejestracja wady lakieru</h3>
+    <p class="text-[10px] text-stone-400 mb-3" id="modal-subtitle">Strefa: TOP</p>
+
+    <div class="space-y-3 text-xs">
+        <div>
+            <label class="block text-stone-400 uppercase text-[10px] mb-1">Rodzaj uszkodzenia:</label>
+            <select id="modal-damage-type" class="w-full bg-stone-950 border border-stone-800 text-white p-2 outline-none">
+                <option value="SCRATCH">Głęboka rysa (do podkładu)</option>
+                <option value="CHIP">Odprysk od kamienia</option>
+                <option value="DENT">Wgniecenie / wgniotka</option>
+                <option value="REPAINT">Ślad powtórnego lakieru / szpachla</option>
+                <option value="OTHER">Inne uszkodzenie</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-stone-400 uppercase text-[10px] mb-1">Krótka notatka / lokalizacja:</label>
+            <input id="modal-damage-note" type="text" placeholder="np. rant drzwi / odprysk do bazy" class="w-full bg-stone-950 border border-stone-800 text-white p-2 outline-none" />
+        </div>
+        <div class="flex justify-end gap-2 pt-3">
+            <button type="button" onclick="dialog.close()" class="px-3 py-1.5 text-stone-400 hover:text-white uppercase text-xs">Anuluj</button>
+            <button type="button" onclick="confirmAddPoint()" class="bg-amber-accent hover:bg-amber-accentHover text-stone-950 font-bold px-4 py-1.5 uppercase text-xs transition">Zapisz punkt</button>
+        </div>
+    </div>
+</dialog>
+
+<script>
+    let pointsData = [
+        {% for p in order.damage_points.all %}
+        {
+            id: {{ p.id }},
+            view_angle: "{{ p.view_angle }}",
+            x: {{ p.x_pos }},
+            y: {{ p.y_pos }},
+            damage_type: "{{ p.damage_type }}",
+            type_label: "{{ p.get_damage_type_display }}",
+            note: "{{ p.note|escapejs }}"
+        },
+        {% endfor %}
+    ];
+
+    let currentBody = "{{ order.vehicle.body_type|default:'SUV' }}";
+    let pendingPoint = null;
+
+    const board = document.getElementById('blueprint-board');
+    const svgEl = document.getElementById('blueprint-svg');
+    const pinsLayer = document.getElementById('pins-layer');
+    const listEl = document.getElementById('damage-list');
+    const dialog = document.getElementById('damage-dialog');
+
+    // Szablony wektorowe (5 rzutów)
+    const BLUEPRINTS = {
+        SUV: `
+            <rect width="1000" height="640" class="fill-transparent" />
+            <!-- 1. PRZÓD -->
+            <g id="zone-FRONT">
+                <rect x="30" y="30" width="280" height="240" class="fill-stone-900/30 stroke-stone-800/80 stroke-1" rx="4"/>
+                <text x="45" y="55" class="fill-amber-accent/80 text-[11px] font-mono font-bold tracking-widest">// 01. PRZÓD (SUV)</text>
+                <path d="M 70 190 L 80 120 L 120 75 L 220 75 L 260 120 L 270 190 L 260 230 L 80 230 Z" class="fill-stone-900 stroke-stone-600 stroke-2" />
+                <path d="M 120 75 L 220 75 L 240 120 L 100 120 Z" class="fill-stone-950 stroke-stone-700 stroke-1" />
+                <rect x="115" y="140" width="110" height="50" rx="8" class="fill-stone-950 stroke-stone-500 stroke-2" />
+                <line x1="170" y1="140" x2="170" y2="190" class="stroke-stone-700 stroke-1" />
+                <polygon points="85,130 115,145 110,165 80,150" class="fill-stone-800 stroke-stone-400 stroke-1" />
+                <polygon points="255,130 225,145 230,165 260,150" class="fill-stone-800 stroke-stone-400 stroke-1" />
+                <rect x="130" y="210" width="80" height="15" rx="3" class="fill-stone-800 stroke-stone-600 stroke-1" />
+            </g>
+            <!-- 2. RZUT Z GÓRY -->
+            <g id="zone-TOP">
+                <rect x="330" y="30" width="340" height="580" class="fill-stone-900/30 stroke-stone-800/80 stroke-1" rx="4"/>
+                <text x="345" y="55" class="fill-amber-accent/80 text-[11px] font-mono font-bold tracking-widest">// 02. RZUT Z GÓRY (SUV)</text>
+                <rect x="375" y="70" width="250" height="510" rx="42" class="fill-stone-900 stroke-stone-600 stroke-2" />
+                <path d="M 400 120 L 600 120 L 590 200 L 410 200 Z" class="fill-stone-950 stroke-stone-500 stroke-1.5" />
+                <text x="475" y="165" class="fill-stone-600 text-[10px] font-mono text-center">MASKA</text>
+                <path d="M 410 200 L 590 200 L 580 250 L 420 250 Z" class="fill-stone-900 stroke-stone-600 stroke-1" />
+                <rect x="420" y="255" width="160" height="230" rx="8" class="fill-stone-950 stroke-stone-500 stroke-1.5" />
+                <line x1="410" y1="240" x2="410" y2="490" class="stroke-amber-accent/40 stroke-2" />
+                <line x1="590" y1="240" x2="590" y2="490" class="stroke-amber-accent/40 stroke-2" />
+                <text x="455" y="375" class="fill-stone-600 text-[10px] font-mono">PANORAMA / DACH</text>
+                <rect x="420" y="510" width="160" height="50" rx="6" class="fill-stone-950 stroke-stone-500 stroke-1.5" />
+                <text x="480" y="540" class="fill-stone-600 text-[9px] font-mono">KLAPA</text>
+            </g>
+            <!-- 3. TYŁ -->
+            <g id="zone-REAR">
+                <rect x="690" y="30" width="280" height="240" class="fill-stone-900/30 stroke-stone-800/80 stroke-1" rx="4"/>
+                <text x="705" y="55" class="fill-amber-accent/80 text-[11px] font-mono font-bold tracking-widest">// 03. TYŁ (SUV)</text>
+                <path d="M 730 190 L 745 110 L 780 75 L 880 75 L 915 110 L 930 190 L 920 230 L 740 230 Z" class="fill-stone-900 stroke-stone-600 stroke-2" />
+                <path d="M 780 75 L 880 75 L 895 125 L 765 125 Z" class="fill-stone-950 stroke-stone-700 stroke-1" />
+                <rect x="740" y="140" width="180" height="12" rx="2" class="fill-red-950 stroke-red-500 stroke-1" />
+                <rect x="795" y="170" width="70" height="30" rx="3" class="fill-stone-950 stroke-stone-700 stroke-1" />
+                <rect x="760" y="215" width="140" height="18" rx="4" class="fill-stone-950 stroke-stone-600 stroke-1" />
+                <circle cx="775" cy="224" r="6" class="fill-stone-800 stroke-stone-400 stroke-1" />
+                <circle cx="885" cy="224" r="6" class="fill-stone-800 stroke-stone-400 stroke-1" />
+            </g>
+            <!-- 4. LEWY BOK -->
+            <g id="zone-LEFT">
+                <rect x="30" y="290" width="280" height="320" class="fill-stone-900/30 stroke-stone-800/80 stroke-1" rx="4"/>
+                <text x="45" y="315" class="fill-amber-accent/80 text-[11px] font-mono font-bold tracking-widest">// 04. LEWY BOK (SUV)</text>
+                <path d="M 45 520 L 70 480 L 105 440 L 145 380 L 225 380 L 260 440 L 295 500 L 295 535 L 45 535 Z" class="fill-stone-900 stroke-stone-600 stroke-2" />
+                <circle cx="95" cy="535" r="32" class="fill-stone-950 stroke-stone-400 stroke-2" />
+                <circle cx="245" cy="535" r="32" class="fill-stone-950 stroke-stone-400 stroke-2" />
+                <path d="M 145 390 L 180 390 L 180 445 L 115 445 Z" class="fill-stone-950 stroke-stone-700 stroke-1" />
+                <path d="M 188 390 L 225 390 L 245 445 L 188 445 Z" class="fill-stone-950 stroke-stone-700 stroke-1" />
+                <line x1="184" y1="390" x2="184" y2="515" class="stroke-stone-700 stroke-1" />
+                <text x="145" y="485" class="fill-stone-500 text-[9px] font-mono">DRZWI L</text>
+            </g>
+            <!-- 5. PRAWY BOK -->
+            <g id="zone-RIGHT">
+                <rect x="690" y="290" width="280" height="320" class="fill-stone-900/30 stroke-stone-800/80 stroke-1" rx="4"/>
+                <text x="705" y="315" class="fill-amber-accent/80 text-[11px] font-mono font-bold tracking-widest">// 05. PRAWY BOK (SUV)</text>
+                <g transform="translate(1660, 0) scale(-1, 1)">
+                    <path d="M 695 520 L 720 480 L 755 440 L 795 380 L 875 380 L 910 440 L 945 500 L 945 535 L 695 535 Z" class="fill-stone-900 stroke-stone-600 stroke-2" />
+                    <circle cx="745" cy="535" r="32" class="fill-stone-950 stroke-stone-400 stroke-2" />
+                    <circle cx="895" cy="535" r="32" class="fill-stone-950 stroke-stone-400 stroke-2" />
+                    <path d="M 795 390 L 830 390 L 830 445 L 765 445 Z" class="fill-stone-950 stroke-stone-700 stroke-1" />
+                    <path d="M 838 390 L 875 390 L 895 445 L 838 445 Z" class="fill-stone-950 stroke-stone-700 stroke-1" />
+                    <line x1="834" y1="390" x2="834" y2="515" class="stroke-stone-700 stroke-1" />
+                </g>
+                <text x="805" y="485" class="fill-stone-500 text-[9px] font-mono">DRZWI P</text>
+            </g>
+        `,
+        SEDAN: `
+            <rect width="1000" height="640" class="fill-transparent" />
+            <g id="zone-FRONT">
+                <rect x="30" y="30" width="280" height="240" class="fill-stone-900/30 stroke-stone-800/80 stroke-1" rx="4"/>
+                <text x="45" y="55" class="fill-amber-accent/80 text-[11px] font-mono font-bold tracking-widest">// 01. PRZÓD (SEDAN)</text>
+                <path d="M 65 195 L 85 130 L 125 90 L 215 90 L 255 130 L 275 195 L 260 230 L 80 230 Z" class="fill-stone-900 stroke-stone-600 stroke-2" />
+                <path d="M 125 90 L 215 90 L 235 130 L 105 130 Z" class="fill-stone-950 stroke-stone-700 stroke-1" />
+                <rect x="120" y="145" width="45" height="35" rx="6" class="fill-stone-950 stroke-amber-accent/80 stroke-1.5" />
+                <rect x="175" y="145" width="45" height="35" rx="6" class="fill-stone-950 stroke-amber-accent/80 stroke-1.5" />
+            </g>
+            <g id="zone-TOP">
+                <rect x="330" y="30" width="340" height="580" class="fill-stone-900/30 stroke-stone-800/80 stroke-1" rx="4"/>
+                <text x="345" y="55" class="fill-amber-accent/80 text-[11px] font-mono font-bold tracking-widest">// 02. RZUT Z GÓRY (SEDAN)</text>
+                <rect x="385" y="70" width="230" height="510" rx="48" class="fill-stone-900 stroke-stone-600 stroke-2" />
+                <path d="M 405 125 L 595 125 L 585 220 L 415 220 Z" class="fill-stone-950 stroke-stone-500 stroke-1.5" />
+                <text x="475" y="175" class="fill-stone-600 text-[10px] font-mono">MASKA</text>
+                <rect x="420" y="270" width="160" height="190" rx="6" class="fill-stone-950 stroke-stone-500 stroke-1.5" />
+                <text x="480" y="370" class="fill-stone-600 text-[10px] font-mono">DACH</text>
+                <path d="M 420 495 L 580 495 L 570 555 L 430 555 Z" class="fill-stone-950 stroke-stone-500 stroke-1.5" />
+                <text x="475" y="530" class="fill-stone-600 text-[10px] font-mono">BAGAŻNIK</text>
+            </g>
+            <g id="zone-REAR">
+                <rect x="690" y="30" width="280" height="240" class="fill-stone-900/30 stroke-stone-800/80 stroke-1" rx="4"/>
+                <text x="705" y="55" class="fill-amber-accent/80 text-[11px] font-mono font-bold tracking-widest">// 03. TYŁ (SEDAN)</text>
+                <path d="M 725 195 L 745 120 L 785 85 L 875 85 L 915 120 L 935 195 L 920 230 L 740 230 Z" class="fill-stone-900 stroke-stone-600 stroke-2" />
+                <rect x="735" y="145" width="60" height="25" rx="3" class="fill-red-950 stroke-red-500 stroke-1" />
+                <rect x="865" y="145" width="60" height="25" rx="3" class="fill-red-950 stroke-red-500 stroke-1" />
+                <rect x="800" y="170" width="60" height="25" rx="3" class="fill-stone-950 stroke-stone-700 stroke-1" />
+            </g>
+            <g id="zone-LEFT">
+                <rect x="30" y="290" width="280" height="320" class="fill-stone-900/30 stroke-stone-800/80 stroke-1" rx="4"/>
+                <text x="45" y="315" class="fill-amber-accent/80 text-[11px] font-mono font-bold tracking-widest">// 04. LEWY BOK (SEDAN)</text>
+                <path d="M 45 520 L 85 490 L 125 435 L 220 435 L 260 480 L 295 505 L 295 535 L 45 535 Z" class="fill-stone-900 stroke-stone-600 stroke-2" />
+                <circle cx="95" cy="535" r="30" class="fill-stone-950 stroke-stone-400 stroke-2" />
+                <circle cx="245" cy="535" r="30" class="fill-stone-950 stroke-stone-400 stroke-2" />
+                <line x1="175" y1="435" x2="175" y2="520" class="stroke-stone-700 stroke-1" />
+                <text x="125" y="480" class="fill-stone-600 text-[9px] font-mono">PRZÓD L</text>
+                <text x="195" y="480" class="fill-stone-600 text-[9px] font-mono">TYŁ L</text>
+            </g>
+            <g id="zone-RIGHT">
+                <rect x="690" y="290" width="280" height="320" class="fill-stone-900/30 stroke-stone-800/80 stroke-1" rx="4"/>
+                <text x="705" y="315" class="fill-amber-accent/80 text-[11px] font-mono font-bold tracking-widest">// 05. PRAWY BOK (SEDAN)</text>
+                <g transform="translate(1660, 0) scale(-1, 1)">
+                    <path d="M 695 520 L 735 490 L 775 435 L 870 435 L 910 480 L 945 505 L 945 535 L 695 535 Z" class="fill-stone-900 stroke-stone-600 stroke-2" />
+                    <circle cx="745" cy="535" r="30" class="fill-stone-950 stroke-stone-400 stroke-2" />
+                    <circle cx="895" cy="535" r="30" class="fill-stone-950 stroke-stone-400 stroke-2" />
+                    <line x1="825" y1="435" x2="825" y2="520" class="stroke-stone-700 stroke-1" />
+                </g>
+                <text x="770" y="480" class="fill-stone-600 text-[9px] font-mono">PRZÓD P</text>
+                <text x="840" y="480" class="fill-stone-600 text-[9px] font-mono">TYŁ P</text>
+            </g>
+        `,
+        COUPE: `
+            <rect width="1000" height="640" class="fill-transparent" />
+            <g id="zone-FRONT">
+                <rect x="30" y="30" width="280" height="240" class="fill-stone-900/30 stroke-stone-800/80 stroke-1" rx="4"/>
+                <text x="45" y="55" class="fill-amber-accent/80 text-[11px] font-mono font-bold tracking-widest">// 01. PRZÓD (COUPE)</text>
+                <path d="M 60 200 L 80 140 L 130 95 L 210 95 L 260 140 L 280 200 L 260 230 L 80 230 Z" class="fill-stone-900 stroke-stone-600 stroke-2" />
+                <polygon points="120,150 220,150 205,190 135,190" class="fill-stone-950 stroke-amber-accent stroke-1.5" />
+            </g>
+            <g id="zone-TOP">
+                <rect x="330" y="30" width="340" height="580" class="fill-stone-900/30 stroke-stone-800/80 stroke-1" rx="4"/>
+                <text x="345" y="55" class="fill-amber-accent/80 text-[11px] font-mono font-bold tracking-widest">// 02. RZUT Z GÓRY (COUPE)</text>
+                <rect x="390" y="70" width="220" height="510" rx="55" class="fill-stone-900 stroke-stone-600 stroke-2" />
+                <path d="M 405 130 L 595 130 L 580 250 L 420 250 Z" class="fill-stone-950 stroke-stone-500 stroke-1.5" />
+                <text x="470" y="200" class="fill-stone-600 text-[10px] font-mono">DŁUGA MASKA</text>
+                <rect x="425" y="280" width="150" height="150" rx="10" class="fill-stone-950 stroke-stone-500 stroke-1.5" />
+                <text x="480" y="360" class="fill-stone-600 text-[10px] font-mono">DACH</text>
+                <path d="M 425 460 L 575 460 L 560 550 L 440 550 Z" class="fill-stone-950 stroke-stone-500 stroke-1.5" />
+                <text x="480" y="510" class="fill-stone-600 text-[9px] font-mono">TYŁ</text>
+            </g>
+            <g id="zone-REAR">
+                <rect x="690" y="30" width="280" height="240" class="fill-stone-900/30 stroke-stone-800/80 stroke-1" rx="4"/>
+                <text x="705" y="55" class="fill-amber-accent/80 text-[11px] font-mono font-bold tracking-widest">// 03. TYŁ (COUPE)</text>
+                <path d="M 720 200 L 745 135 L 795 90 L 865 90 L 915 135 L 940 200 L 920 230 L 740 230 Z" class="fill-stone-900 stroke-stone-600 stroke-2" />
+                <path d="M 735 155 L 810 155 L 800 170 L 745 170 Z" class="fill-red-950 stroke-red-500 stroke-1.5" />
+                <path d="M 925 155 L 850 155 L 860 170 L 915 170 Z" class="fill-red-950 stroke-red-500 stroke-1.5" />
+            </g>
+            <g id="zone-LEFT">
+                <rect x="30" y="290" width="280" height="320" class="fill-stone-900/30 stroke-stone-800/80 stroke-1" rx="4"/>
+                <text x="45" y="315" class="fill-amber-accent/80 text-[11px] font-mono font-bold tracking-widest">// 04. LEWY BOK (COUPE)</text>
+                <path d="M 45 520 L 95 490 L 155 440 L 220 440 L 275 495 L 295 515 L 295 535 L 45 535 Z" class="fill-stone-900 stroke-stone-600 stroke-2" />
+                <circle cx="95" cy="535" r="30" class="fill-stone-950 stroke-stone-400 stroke-2" />
+                <circle cx="245" cy="535" r="30" class="fill-stone-950 stroke-stone-400 stroke-2" />
+                <line x1="210" y1="440" x2="210" y2="520" class="stroke-stone-700 stroke-1" />
+                <text x="135" y="485" class="fill-stone-500 text-[9px] font-mono">DŁUGIE DRZWI</text>
+            </g>
+            <g id="zone-RIGHT">
+                <rect x="690" y="290" width="280" height="320" class="fill-stone-900/30 stroke-stone-800/80 stroke-1" rx="4"/>
+                <text x="705" y="315" class="fill-amber-accent/80 text-[11px] font-mono font-bold tracking-widest">// 05. PRAWY BOK (COUPE)</text>
+                <g transform="translate(1660, 0) scale(-1, 1)">
+                    <path d="M 695 520 L 745 490 L 805 440 L 870 440 L 925 495 L 945 515 L 945 535 L 695 535 Z" class="fill-stone-900 stroke-stone-600 stroke-2" />
+                    <circle cx="745" cy="535" r="30" class="fill-stone-950 stroke-stone-400 stroke-2" />
+                    <circle cx="895" cy="535" r="30" class="fill-stone-950 stroke-stone-400 stroke-2" />
+                    <line x1="860" y1="440" x2="860" y2="520" class="stroke-stone-700 stroke-1" />
+                </g>
+                <text x="800" y="485" class="fill-stone-500 text-[9px] font-mono">DŁUGIE DRZWI P</text>
+            </g>
+        `
+    };
+
+    function renderBoard() {
+        svgEl.innerHTML = BLUEPRINTS[currentBody] || BLUEPRINTS.SUV;
+
+        document.querySelectorAll('.body-btn').forEach(btn => {
+            btn.className = "body-btn px-2 py-0.5 transition text-stone-400 hover:text-white";
+        });
+        const activeBtn = document.getElementById(`btn-${currentBody}`);
+        if (activeBtn) {
+            activeBtn.className = "body-btn px-2 py-0.5 transition bg-stone-800 text-amber-accent font-bold border border-amber-accent/40";
+        }
+        document.getElementById('badge-body-type').textContent = currentBody;
+
+        renderPins();
+        renderList();
+    }
+
+    function renderPins() {
+        pinsLayer.innerHTML = '';
+        pointsData.forEach(p => {
+            const pin = document.createElement('div');
+            pin.id = `pin-${p.id}`;
+            pin.className = "damage-pin absolute w-4 h-4 -ml-2 -mt-2 rounded-full border border-red-400 bg-red-600 flex items-center justify-center cursor-pointer hover:scale-125 transition shadow-md shadow-red-950";
+            pin.style.left = `${p.x}%`;
+            pin.style.top = `${p.y}%`;
+            pin.title = `[${p.view_angle}] ${p.type_label}: ${p.note}`;
+            pin.innerHTML = `<span class="text-[9px] text-white font-mono font-bold">!</span>`;
+            pin.onclick = (e) => {
+                e.stopPropagation();
+                deletePointRequest(p.id);
+            };
+            pinsLayer.appendChild(pin);
+        });
+    }
+
+    function renderList() {
+        listEl.innerHTML = '';
+        document.getElementById('damage-counter').textContent = pointsData.length;
+
+        if (pointsData.length === 0) {
+            listEl.innerHTML = `<li class="py-8 text-center text-stone-600 text-xs">Brak oznaczonych wad lakieru.</li>`;
+            return;
+        }
+
+        pointsData.forEach(p => {
+            const li = document.createElement('li');
+            li.id = `list-item-${p.id}`;
+            li.className = "py-2 px-2 flex justify-between items-center text-stone-300 bg-stone-900/60 border border-stone-850 hover:border-stone-700 transition";
+            li.innerHTML = `
+                <div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 bg-stone-800 text-amber-accent">${p.view_angle}</span>
+                        <span class="text-red-400 font-bold">${p.type_label}</span>
+                    </div>
+                    <span class="text-[10px] text-stone-400 block mt-0.5">${p.note || 'Brak uwag'}</span>
+                </div>
+                <button type="button" onclick="deletePointRequest(${p.id})" class="text-stone-500 hover:text-red-400 text-xs px-2 py-1">✕</button>
+            `;
+            listEl.appendChild(li);
+        });
+    }
+
+    function changeBodyType(type) {
+        currentBody = type;
+        renderBoard();
+    }
+
+    function detectZone(x, y) {
+        if (x >= 33 && x <= 67) return 'TOP';
+        if (x < 33 && y <= 45) return 'FRONT';
+        if (x > 67 && y <= 45) return 'REAR';
+        if (x < 33 && y > 45) return 'LEFT';
+        if (x > 67 && y > 45) return 'RIGHT';
+        return 'TOP';
+    }
+
+    board.addEventListener('click', function(e) {
+        if (e.target.closest('.damage-pin')) return;
+        const rect = board.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+        const zone = detectZone(x, y);
+        pendingPoint = { x: x.toFixed(2), y: y.toFixed(2), zone: zone };
+
+        document.getElementById('modal-subtitle').textContent = `Strefa: ${zone} (${pendingPoint.x}%, ${pendingPoint.y}%)`;
+        document.getElementById('modal-damage-note').value = '';
+        dialog.showModal();
+    });
+
+    function confirmAddPoint() {
+        if (!pendingPoint) return;
+        const type = document.getElementById('modal-damage-type').value;
+        const note = document.getElementById('modal-damage-note').value;
+
+        fetch("{% url 'order_damage_add' order.id %}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": "{{ csrf_token }}"
+            },
+            body: JSON.stringify({
+                view_angle: pendingPoint.zone,
+                x: pendingPoint.x,
+                y: pendingPoint.y,
+                damage_type: type,
+                note: note
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'ok') {
+                dialog.close();
+                pointsData.push({
+                    id: data.id,
+                    view_angle: data.view_angle,
+                    x: data.x,
+                    y: data.y,
+                    damage_type: data.type,
+                    type_label: data.type_label,
+                    note: data.note
+                });
+                renderPins();
+                renderList();
+            }
+        });
+    }
+
+    function deletePointRequest(pointId) {
+        fetch(`/damage/${pointId}/delete/`, {
+            method: "POST",
+            headers: { "X-CSRFToken": "{{ csrf_token }}" }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'ok') {
+                pointsData = pointsData.filter(p => p.id !== pointId);
+                renderPins();
+                renderList();
+            }
+        });
+    }
+
+    function requestAIBlueprint() {
+        const btn = document.getElementById('btn-ai-generate');
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = `<span>⏳ Generowanie przez Gemini...</span>`;
+        btn.disabled = true;
+
+        fetch("{% url 'generate_ai_blueprint' order.id %}", {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}"
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'ok') {
+                svgEl.innerHTML = data.svg_code;
+                btn.innerHTML = `<span>✓ Wygenerowano z AI</span>`;
+                btn.classList.remove('bg-purple-950/60', 'text-purple-200', 'border-purple-500/50');
+                btn.classList.add('bg-emerald-950/60', 'text-emerald-300', 'border-emerald-500/50');
+                renderPins();
+            } else {
+                alert("Błąd AI: " + data.message);
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+            }
+        })
+        .catch(err => {
+            alert("Błąd połączenia z serwerem: " + err);
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+        });
+    }
+
+    function toggleND(inputId, isChecked) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        if (isChecked) {
+            input.dataset.prev = input.value;
+            input.value = "N/D";
+            input.classList.add('opacity-40');
+        } else {
+            input.value = (input.dataset.prev && input.dataset.prev !== 'N/D') ? input.dataset.prev : "100-120";
+            input.classList.remove('opacity-40');
+        }
+    }
+
+    // Inicjalizacja domyślnego rzutu
+    changeBodyType(currentBody);
+</script>
+{% endblock %}

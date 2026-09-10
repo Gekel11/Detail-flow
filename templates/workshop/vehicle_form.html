@@ -13,6 +13,12 @@
         <form method="POST" class="space-y-5" novalidate>
             {% csrf_token %}
 
+            {% if form.non_field_errors %}
+                <div class="p-3 border border-red-900 bg-red-950/40 text-red-300 text-xs font-mono">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
             <div>
                 <div class="flex justify-between items-center mb-2">
                     <label for="{{ form.owner.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300">
@@ -28,7 +34,7 @@
                 {% endif %}
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                     <label for="{{ form.make.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300 mb-2">Marka *</label>
                     {{ form.make }}
@@ -38,6 +44,11 @@
                     <label for="{{ form.model.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300 mb-2">Model *</label>
                     {{ form.model }}
                     {% if form.model.errors %}<p class="text-xs font-mono text-red-400 mt-1">{{ form.model.errors.0 }}</p>{% endif %}
+                </div>
+                <div>
+                    <label for="{{ form.body_type.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300 mb-2">Nadwozie *</label>
+                    {{ form.body_type }}
+                    {% if form.body_type.errors %}<p class="text-xs font-mono text-red-400 mt-1">{{ form.body_type.errors.0 }}</p>{% endif %}
                 </div>
             </div>
 

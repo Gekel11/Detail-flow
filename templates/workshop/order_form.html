@@ -44,8 +44,8 @@
             </div>
 
             <!-- Zakres prac -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="md:col-span-2">
+            <div class="space-y-4">
+                <div>
                     <label for="{{ form.service_name.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300 mb-2">
                         02. Pakiet detailingowy / Usługa główna *
                     </label>
@@ -55,7 +55,40 @@
                     {% endif %}
                 </div>
 
-                <div class="md:col-span-2">
+                <!-- Zakres procedur technicznych (Checkboxy wyboru) -->
+                <div class="border border-stone-800 bg-stone-950 p-4 space-y-3">
+                    <p class="text-xs font-mono uppercase text-amber-accent tracking-wider">// WYMAGANE PROCEDURY TECHNICZNE</p>
+
+                    <div class="flex items-start gap-3">
+                        <div class="pt-0.5">
+                            {{ form.requires_paint_inspection }}
+                        </div>
+                        <div>
+                            <label for="{{ form.requires_paint_inspection.id_for_label }}" class="text-xs font-mono text-stone-200 cursor-pointer block font-semibold">
+                                Wymaga inspekcji powłoki lakierniczej (Korekta / Polerowanie One-Step)
+                            </label>
+                            <p class="text-[11px] font-mono text-stone-500">
+                                Blokuje bezpośredni wjazd na halę do momentu uzupełnienia siatki grubości lakieru w µm.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-3 pt-2 border-t border-stone-900">
+                        <div class="pt-0.5">
+                            {{ form.requires_coating_certificate }}
+                        </div>
+                        <div>
+                            <label for="{{ form.requires_coating_certificate.id_for_label }}" class="text-xs font-mono text-stone-200 cursor-pointer block font-semibold">
+                                Aplikacja powłoki ochronnej (Ceramika / Elastomer / PPF)
+                            </label>
+                            <p class="text-[11px] font-mono text-stone-500">
+                                Wystawia certyfikat gwarancyjny i automatycznie generuje załącznik PDF w mailu odbiorczym.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
                     <label for="{{ form.description.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300 mb-2">
                         03. Uwagi techniczne i inspekcja wstępna
                     </label>
@@ -67,7 +100,7 @@
             </div>
 
             <!-- Finanse i harmonogram -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-stone-800/80 pt-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-stone-800/80 pt-6">
                 <div>
                     <label for="{{ form.price_total.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300 mb-2">
                         Wycena (PLN) *
@@ -85,16 +118,6 @@
                     {{ form.deposit_paid }}
                     {% if form.deposit_paid.errors %}
                         <p class="text-xs font-mono text-red-400 mt-1">{{ form.deposit_paid.errors.0 }}</p>
-                    {% endif %}
-                </div>
-
-                <div>
-                    <label for="{{ form.status.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300 mb-2">
-                        Status startowy
-                    </label>
-                    {{ form.status }}
-                    {% if form.status.errors %}
-                        <p class="text-xs font-mono text-red-400 mt-1">{{ form.status.errors.0 }}</p>
                     {% endif %}
                 </div>
             </div>
