@@ -23,11 +23,10 @@ class Vehicle(models.Model):
 
 class ServiceOrder(models.Model):
     STATUS_CHOICES = [
-        ('PENDING', 'Oczekuje na przyjęcie'),
-        ('IN_PROGRESS', 'W trakcie prac'),
-        ('READY', 'Gotowy do odbioru'),
-        ('COMPLETED', 'Zakończone i wydane'),
-        ('CANCELLED', 'Anulowane'),
+        ('PENDING', 'W kolejce'),
+        ('IN_PROGRESS', 'Rozpoczęte'),
+        ('READY', 'Gotowe do wydania'),
+        ('COMPLETED', 'Wydane'),
     ]
 
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='orders')
@@ -42,3 +41,41 @@ class ServiceOrder(models.Model):
 
     def __str__(self):
         return f"Zlecenie #{self.id} - {self.vehicle} ({self.get_status_display()})"
+
+
+class CoatingCertificate(models.Model):
+    order = models.OneToOneField(
+        ServiceOrder,
+        on_delete=models.CASCADE,
+        related_name='coating_certificate',
+        verbose_name="Zlecenie detailingowe"
+    )
+
+    coating_product = models.CharField(max_length=120, default="Ceramic Base 9H + Top Coat",
+                                       verbose_name="Produkt powłoki")
+    coating_layers = models.PositiveSmallIntegerField(default=2, verbose_name="Liczba warstw")
+    warranty_months = models.PositiveSmallIntegerField(default=36, verbose_name="Gwarancja (miesiące)")
+    curing_time_hours = models.PositiveSmallIntegerField(default=24, verbose_name="Czas utwardzania (h)")
+
+    # Pomiary grubości lakieru przed polerowaniem (µm)
+    thickness_hood = models.CharField(max_length=30, default="110-130", verbose_name="Maska (µm)")
+    thickness_roof = models.CharField(max_length=30, default="100-120", verbose_name="Dach (µm)")
+    thickness_trunk = models.CharField(max_length=30, default="105-125", verbose_name="Klapa bagażnika (µm)")
+    thickness_doors_left = models.CharField(max_length=30, default="95-115", verbose_name="Drzwi lewe (µm)")
+    thickness_doors_right = models.CharField(max_length=30, default="95-115", verbose_name="Drzwi prawe (µm)")
+    thickness_fenders = models.CharField(max_length=30, default="100-120", verbose_name="Błotniki (µm)")
+
+    maintenance_guide = models.TextField(
+        verbose_name="Zalecenia serwisowe",
+        default=(
+            "1. Mycie wyłącznie metodą na dwa wiadra z szamponem o neutralnym pH.\n"
+            "2. Bezwzględny zakaz korzystania z myjni szczotkowych i agresywnej chemii bezdotykowej.\n"
+            "3. Pierwsze mycie ręczne możliwe po minimum 14 dniach od aplikacji powłoki.\n"
+            "4. Wymagany przegląd powłoki oraz dekontaminacja lakieru co 6 miesięcy lub 10 000 km."
+        )
+    )
+    issued_at = models.DateTimeField(auto_now_add=True, verbose_name="Data wystawienia")
+
+    def __str__(self):
+        return f"Certyfikat #{self.id} (Zlecenie #{self.order.id})"
+

@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block title %}Nowy klient — DetailFlow{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto">
+    <div class="border-b border-stone-800 pb-4 mb-6">
+        <p class="text-xs font-mono uppercase tracking-widest text-amber-accent">// KARTOTEKA KLIENTÓW</p>
+        <h1 class="text-2xl font-display font-bold uppercase tracking-tight text-white mt-1">Rejestracja klienta</h1>
+    </div>
+
+    <div class="border border-stone-800 bg-stone-900 p-6 sm:p-8">
+        <form method="POST" class="space-y-4" novalidate>
+            {% csrf_token %}
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="{{ form.first_name.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300 mb-2">Imię *</label>
+                    {{ form.first_name }}
+                    {% if form.first_name.errors %}<p class="text-xs font-mono text-red-400 mt-1">{{ form.first_name.errors.0 }}</p>{% endif %}
+                </div>
+                <div>
+                    <label for="{{ form.last_name.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300 mb-2">Nazwisko *</label>
+                    {{ form.last_name }}
+                    {% if form.last_name.errors %}<p class="text-xs font-mono text-red-400 mt-1">{{ form.last_name.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+
+            <div>
+                <label for="{{ form.email.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300 mb-2">Adres e-mail (powiadomienia) *</label>
+                {{ form.email }}
+                {% if form.email.errors %}<p class="text-xs font-mono text-red-400 mt-1">{{ form.email.errors.0 }}</p>{% endif %}
+            </div>
+
+            <div>
+                <label for="{{ form.phone.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300 mb-2">Numer telefonu *</label>
+                {{ form.phone }}
+                {% if form.phone.errors %}<p class="text-xs font-mono text-red-400 mt-1">{{ form.phone.errors.0 }}</p>{% endif %}
+            </div>
+
+            <div class="flex items-center justify-between pt-6 border-t border-stone-800">
+                <a href="{% url 'vehicle_create' %}" class="text-xs font-mono text-stone-500 hover:text-stone-300 uppercase tracking-wider">
+                    ← Powrót do pojazdu
+                </a>
+                <button type="submit" class="bg-amber-accent hover:bg-amber-accentHover text-stone-950 font-display font-bold text-xs uppercase tracking-wider px-6 py-3 transition">
+                    Zapisz klienta
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

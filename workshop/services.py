@@ -1,31 +1,21 @@
-from django.core.mail import send_mail
-from django.conf import settings
-from .models import ServiceOrder
+from io import BytesIO
+from django.template.loader import render_to_string
+from weasyprint import HTML
 
-class NotificationService:
-    @staticmethod
-    def send_order_ready_email(order_id: int) -> bool:
-        try:
-            order = ServiceOrder.objects.select_related('vehicle__owner').get(id=order_id)
-            customer = order.vehicle.owner
-
-            subject = f"Twój pojazd jest gotowy do odbioru! [{order.vehicle.license_plate}]"
-            message = (
-                f"Cześć {customer.first_name},\n\n"
-                f"Prace nad Twoim samochodem ({order.vehicle.make} {order.vehicle.model}) zostały zakończone.\n"
-                f"Usługa: {order.service_name}\n"
-                f"Pozostała kwota do zapłaty: {order.price_total - order.deposit_paid} PLN.\n\n"
-                f"Zapraszamy po odbiór auta do studia!\n"
-                f"Zespół DetailFlow"
-            )
-
-            send_mail(
-                subject=subject,
-                message=message,
-                from_email='powiadomienia@detailflow.local',
-                recipient_list=[customer.email],
-                fail_silently=False,
-            )
-            return True
-        except ServiceOrder.DoesNotExist:
-            return False
+def generate_coating_certificate_pdf(certificate) -> bytes:
+    """Renderuje szablon HTML certyfikatu do binarnego pliku PDF."""
+    context = {
+        'cert': certificate,
+        'order': certificate.order,
+        'vehicle': certificate.order.vehicle,
+        'customer': certificate.order.vehicle.owner,
+    }
+    
+    html_string = render_to_string('workshop/certificate_pdf.html', context)
+    
+    pdf_buffer = BytesIO()
+    HTML(string=html_string).write_pdf(target=pdf_buffer)
+    pdf_bytes = pdf_buffer.getvalue()
+    pdf_buffer.close()
+    
+    return pdf_bytes

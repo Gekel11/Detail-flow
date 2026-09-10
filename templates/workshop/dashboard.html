@@ -1,102 +1,173 @@
 {% extends 'base.html' %}
 
-{% block title %}Pulpit studia – DetailFlow{% endblock %}
+{% block title %}Hala operacyjna — DetailFlow{% endblock %}
 
 {% block content %}
-<div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
+<!-- Nagłówek sekcji z kontekstem roboczym -->
+<div class="border-b border-stone-800 pb-6 mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
     <div>
-        <h1 class="text-2xl font-bold text-white tracking-tight">Pulpit studia</h1>
-        <p class="text-sm text-gray-400 mt-1">Zlecenia detailingowe, status hali i pojazdy gotowe do wydania.</p>
+        <p class="text-xs font-mono uppercase tracking-widest text-amber-accent mb-1">// DZIENNIK PRAC DETAILFLOW</p>
+        <h1 class="text-2xl sm:text-3xl font-display font-bold tracking-tight text-white uppercase">Stan hali i zlecenia</h1>
     </div>
-    <a href="{% url 'order_create' %}"
-       class="inline-flex items-center justify-center bg-blue-600 hover:bg-blue-500 text-white font-medium px-4 py-2.5 rounded-lg text-sm transition shadow">
-        + Przyjmij pojazd
+    <div class="text-xs font-mono text-stone-400">
+        AKTYWNY TRYB: <span class="text-white uppercase font-bold">{{ current_filter }}</span>
+    </div>
+</div>
+
+<!-- Kafelki metryk operacyjnych (Zaprojektowane jako wskaźniki kontrolne) -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+    <a href="?status=PENDING"
+       class="border {% if current_filter == 'PENDING' %}border-amber-accent bg-stone-850{% else %}border-stone-800 bg-stone-900 hover:border-stone-700{% endif %} p-4 transition-all block">
+        <div class="flex items-center justify-between text-xs font-mono text-stone-400 mb-2">
+            <span>01 / KOLEJKA</span>
+            <span class="w-1.5 h-1.5 bg-stone-500"></span>
+        </div>
+        <div class="text-2xl font-display font-bold text-white">{{ pending_count }}</div>
+        <p class="text-[11px] text-stone-500 mt-1">Oczekuje przed halą</p>
+    </a>
+
+    <a href="?status=IN_PROGRESS"
+       class="border {% if current_filter == 'IN_PROGRESS' %}border-amber-accent bg-stone-850{% else %}border-stone-800 bg-stone-900 hover:border-stone-700{% endif %} p-4 transition-all block">
+        <div class="flex items-center justify-between text-xs font-mono text-amber-accent mb-2">
+            <span>02 / PROCES</span>
+            <span class="w-1.5 h-1.5 bg-amber-accent animate-pulse"></span>
+        </div>
+        <div class="text-2xl font-display font-bold text-white">{{ in_progress_count }}</div>
+        <p class="text-[11px] text-stone-500 mt-1">Stanowiska robocze</p>
+    </a>
+
+    <a href="?status=READY"
+       class="border {% if current_filter == 'READY' %}border-amber-accent bg-stone-850{% else %}border-stone-800 bg-stone-900 hover:border-stone-700{% endif %} p-4 transition-all block">
+        <div class="flex items-center justify-between text-xs font-mono text-emerald-400 mb-2">
+            <span>03 / ODBIÓR</span>
+            <span class="w-1.5 h-1.5 bg-emerald-400"></span>
+        </div>
+        <div class="text-2xl font-display font-bold text-white">{{ ready_count }}</div>
+        <p class="text-[11px] text-stone-500 mt-1">Powiadomiono klienta</p>
+    </a>
+
+    <a href="?status=COMPLETED"
+       class="border {% if current_filter == 'COMPLETED' %}border-amber-accent bg-stone-850{% else %}border-stone-800 bg-stone-900 hover:border-stone-700{% endif %} p-4 transition-all block">
+        <div class="flex items-center justify-between text-xs font-mono text-stone-400 mb-2">
+            <span>04 / WYDANE</span>
+            <span class="w-1.5 h-1.5 bg-stone-600"></span>
+        </div>
+        <div class="text-2xl font-display font-bold text-stone-300">{{ completed_count }}</div>
+        <p class="text-[11px] text-stone-500 mt-1">Historia realizacji</p>
     </a>
 </div>
 
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-    <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-md">
-        <p class="text-gray-400 text-xs uppercase tracking-wider font-semibold">Wszystkie zlecenia</p>
-        <p class="text-3xl font-bold text-white mt-2">{{ total_count }}</p>
-    </div>
-    <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-md">
-        <p class="text-amber-400 text-xs uppercase tracking-wider font-semibold">W trakcie prac (hala)</p>
-        <p class="text-3xl font-bold text-amber-400 mt-2">{{ in_progress_count }}</p>
-    </div>
-    <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-md">
-        <p class="text-emerald-400 text-xs uppercase tracking-wider font-semibold">Gotowe do wydania</p>
-        <p class="text-3xl font-bold text-emerald-400 mt-2">{{ ready_count }}</p>
-    </div>
+<!-- Pasek selekcji i filtrów technicznych -->
+<div class="border border-stone-800 bg-stone-900 p-2 mb-4 flex flex-wrap items-center gap-1.5">
+    <span class="text-[11px] font-mono text-stone-500 uppercase px-3">Zakres:</span>
+    <a href="{% url 'dashboard' %}"
+       class="px-3 py-1 text-xs font-mono transition {% if current_filter == 'default' %}bg-stone-800 text-amber-accent border border-stone-700{% else %}text-stone-400 hover:text-white{% endif %}">
+        Aktywne na hali
+    </a>
+    <a href="?status=PENDING"
+       class="px-3 py-1 text-xs font-mono transition {% if current_filter == 'PENDING' %}bg-stone-800 text-amber-accent border border-stone-700{% else %}text-stone-400 hover:text-white{% endif %}">
+        Kolejka ({{ pending_count }})
+    </a>
+    <a href="?status=IN_PROGRESS"
+       class="px-3 py-1 text-xs font-mono transition {% if current_filter == 'IN_PROGRESS' %}bg-stone-800 text-amber-accent border border-stone-700{% else %}text-stone-400 hover:text-white{% endif %}">
+        W trakcie ({{ in_progress_count }})
+    </a>
+    <a href="?status=READY"
+       class="px-3 py-1 text-xs font-mono transition {% if current_filter == 'READY' %}bg-stone-800 text-amber-accent border border-stone-700{% else %}text-stone-400 hover:text-white{% endif %}">
+        Gotowe ({{ ready_count }})
+    </a>
+    <a href="?status=COMPLETED"
+       class="px-3 py-1 text-xs font-mono transition {% if current_filter == 'COMPLETED' %}bg-stone-800 text-amber-accent border border-stone-700{% else %}text-stone-400 hover:text-white{% endif %}">
+        Archiwum wydanych ({{ completed_count }})
+    </a>
+    <a href="?status=ALL"
+       class="px-3 py-1 text-xs font-mono transition {% if current_filter == 'ALL' %}bg-stone-800 text-amber-accent border border-stone-700{% else %}text-stone-400 hover:text-white{% endif %}">
+        Wszystkie zlecenia
+    </a>
 </div>
 
-<div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden shadow-lg">
-    <div class="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
-        <h2 class="text-lg font-semibold text-white">Aktywne zlecenia detailingowe</h2>
-        <a href="{% url 'order_create' %}" class="text-xs bg-blue-600/20 text-blue-400 border border-blue-500/40 hover:bg-blue-600/30 px-3 py-1.5 rounded-lg transition font-medium">+ Dodaj zlecenie</a>
-    </div>
-
+<!-- Tabela zleceń (Zaprojektowana w stylu karty warsztatowej) -->
+<div class="border border-stone-800 bg-stone-900 overflow-hidden">
     <div class="overflow-x-auto">
-        <table class="w-full text-left text-sm text-gray-300">
-            <thead class="bg-gray-900/60 text-gray-400 uppercase text-xs">
-                <tr>
-                    <th class="px-6 py-3">Nr</th>
-                    <th class="px-6 py-3">Pojazd i klient</th>
-                    <th class="px-6 py-3">Pakiet usług</th>
-                    <th class="px-6 py-3">Termin</th>
-                    <th class="px-6 py-3">Wycena</th>
-                    <th class="px-6 py-3">Status</th>
-                    <th class="px-6 py-3 text-right">Akcja</th>
+        <table class="w-full text-left text-xs border-collapse">
+            <thead>
+                <tr class="border-b border-stone-800 bg-stone-950 font-mono text-stone-400 uppercase text-[11px] tracking-wider">
+                    <th class="py-3 px-4 w-12">ID</th>
+                    <th class="py-3 px-4">Pojazd / Rejestracja</th>
+                    <th class="py-3 px-4">Właściciel</th>
+                    <th class="py-3 px-4">Zakres usługi</th>
+                    <th class="py-3 px-4">Termin</th>
+                    <th class="py-3 px-4">Rozliczenie</th>
+                    <th class="py-3 px-4">Status</th>
+                    <th class="py-3 px-4 text-right">Procedura</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-700">
+            <tbody class="divide-y divide-stone-850">
                 {% for order in orders %}
-                <tr class="hover:bg-gray-900/40 transition">
-                    <td class="px-6 py-4 font-mono font-bold text-blue-400">#{{ order.id }}</td>
-                    <td class="px-6 py-4">
-                        <div class="font-semibold text-white">{{ order.vehicle.make }} {{ order.vehicle.model }}</div>
-                        <div class="text-xs text-gray-400 mt-0.5">
-                            Rejestracja: <span class="text-gray-300 font-mono">{{ order.vehicle.license_plate }}</span>
-                            · {{ order.vehicle.owner.first_name }} {{ order.vehicle.owner.last_name }}
-                        </div>
+                <tr class="hover:bg-stone-850/60 transition-colors">
+                    <td class="py-3.5 px-4 font-mono text-stone-500">#{{ order.id|stringformat:"03d" }}</td>
+                    <td class="py-3.5 px-4">
+                        <div class="font-medium text-white tracking-wide">{{ order.vehicle.make }} {{ order.vehicle.model }}</div>
+                        <div class="font-mono text-amber-accent text-[11px] mt-0.5">{{ order.vehicle.license_plate }}</div>
                     </td>
-                    <td class="px-6 py-4 font-medium">{{ order.service_name }}</td>
-                    <td class="px-6 py-4 text-gray-300 whitespace-nowrap">{{ order.scheduled_start|date:"d.m.Y H:i" }}</td>
-                    <td class="px-6 py-4">
-                        <div class="font-semibold text-white">{{ order.price_total }} PLN</div>
+                    <td class="py-3.5 px-4 text-stone-300">
+                        <div>{{ order.vehicle.owner.first_name }} {{ order.vehicle.owner.last_name }}</div>
+                        <div class="font-mono text-stone-500 text-[11px]">{{ order.vehicle.owner.phone }}</div>
+                    </td>
+                    <td class="py-3.5 px-4 font-sans text-stone-300 max-w-xs truncate">
+                        {{ order.service_name }}
+                    </td>
+                    <td class="py-3.5 px-4 font-mono text-stone-400 whitespace-nowrap">
+                        {{ order.scheduled_start|date:"d.m.Y H:i" }}
+                    </td>
+                    <td class="py-3.5 px-4 font-mono">
+                        <div class="text-white font-medium">{{ order.price_total }} PLN</div>
                         {% if order.deposit_paid %}
-                            <div class="text-xs text-gray-500">Zadatek: {{ order.deposit_paid }} PLN</div>
+                            <div class="text-[10px] text-stone-500">Zad: {{ order.deposit_paid }} PLN</div>
                         {% endif %}
                     </td>
-                    <td class="px-6 py-4">
-                        {% if order.status == 'READY' %}
-                            <span class="bg-emerald-950 text-emerald-300 border border-emerald-600 px-2.5 py-1 rounded text-xs font-semibold">Gotowy do odbioru</span>
+                    <td class="py-3.5 px-4 font-mono text-[11px]">
+                        {% if order.status == 'PENDING' %}
+                            <span class="text-stone-400 border border-stone-700 px-2 py-0.5 uppercase">Kolejka</span>
                         {% elif order.status == 'IN_PROGRESS' %}
-                            <span class="bg-amber-950 text-amber-300 border border-amber-600 px-2.5 py-1 rounded text-xs font-semibold">W trakcie</span>
+                            <span class="text-amber-accent border border-amber-900/60 bg-amber-dim px-2 py-0.5 uppercase">Prace w toku</span>
+                        {% elif order.status == 'READY' %}
+                            <span class="text-emerald-400 border border-emerald-900/60 bg-emerald-950/40 px-2 py-0.5 uppercase">Gotowy</span>
                         {% elif order.status == 'COMPLETED' %}
-                            <span class="bg-gray-800 text-gray-400 border border-gray-600 px-2.5 py-1 rounded text-xs">Wydane</span>
-                        {% elif order.status == 'CANCELLED' %}
-                            <span class="bg-red-950 text-red-300 border border-red-700 px-2.5 py-1 rounded text-xs">Anulowane</span>
-                        {% else %}
-                            <span class="bg-blue-950 text-blue-300 border border-blue-600 px-2.5 py-1 rounded text-xs">{{ order.get_status_display }}</span>
+                            <span class="text-stone-500 border border-stone-800 px-2 py-0.5 uppercase">Zrealizowane</span>
                         {% endif %}
                     </td>
-                    <td class="px-6 py-4 text-right">
-                        {% if order.status != 'READY' and order.status != 'COMPLETED' and order.status != 'CANCELLED' %}
-                            <a href="{% url 'mark_order_ready' order.id %}"
-                               class="inline-block bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition shadow">
-                                Wydaj auto (Mailpit)
+                    <td class="py-3.5 px-4 text-right">
+                        {% if order.status == 'PENDING' %}
+                            <a href="{% url 'order_update_status' order.id 'IN_PROGRESS' %}"
+                               class="inline-block border border-stone-700 hover:border-amber-accent text-white hover:text-amber-accent px-3 py-1 font-mono text-[11px] uppercase tracking-wider transition">
+                                Wjedź na halę →
+                            </a>
+                        {% elif order.status == 'IN_PROGRESS' %}
+                            <a href="{% url 'order_update_status' order.id 'READY' %}"
+                               class="inline-block bg-amber-accent hover:bg-amber-accentHover text-stone-950 font-semibold px-3 py-1 font-mono text-[11px] uppercase tracking-wider transition">
+                                Oznacz gotowość →
+                            </a>
+                        {% elif order.status == 'READY' %}
+                            <a href="{% url 'order_update_status' order.id 'COMPLETED' %}"
+                               class="inline-block border border-stone-700 hover:border-white text-stone-300 hover:text-white px-3 py-1 font-mono text-[11px] uppercase tracking-wider transition">
+                                Potwierdź wydanie ✓
                             </a>
                         {% else %}
-                            <span class="text-xs text-gray-500 italic">Powiadomiono</span>
+                            <span class="font-mono text-[11px] text-stone-600 uppercase">Wydano</span>
                         {% endif %}
                     </td>
+                    <div class="mt-1">
+                        <a href="{% url 'order_certificate_pdf' order.id %}" target="_blank"
+                           class="inline-block text-[10px] font-mono text-stone-500 hover:text-amber-accent transition">
+                            Pobierz Certyfikat PDF ↗
+                        </a>
+                    </div>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="7" class="px-6 py-12 text-center">
-                        <p class="text-gray-300 font-medium">Brak zarejestrowanych zleceń w bazie.</p>
-                        <p class="text-sm text-gray-500 mt-1">Kliknij „Przyjmij pojazd”, aby dodać pierwsze zlecenie.</p>
-                        <a href="{% url 'order_create' %}" class="inline-block mt-4 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">+ Przyjmij auto</a>
+                    <td colspan="8" class="py-12 px-4 text-center font-mono text-stone-500 text-xs">
+                        BRAK REKORDÓW W BIEŻĄCYM WIDOKU HALI
                     </td>
                 </tr>
                 {% endfor %}

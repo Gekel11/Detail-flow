@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block title %}Nowy pojazd — DetailFlow{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="border-b border-stone-800 pb-4 mb-6">
+        <p class="text-xs font-mono uppercase tracking-widest text-amber-accent">// KARTOTEKA POJAZDÓW</p>
+        <h1 class="text-2xl font-display font-bold uppercase tracking-tight text-white mt-1">Rejestracja nowego pojazdu</h1>
+    </div>
+
+    <div class="border border-stone-800 bg-stone-900 p-6 sm:p-8">
+        <form method="POST" class="space-y-5" novalidate>
+            {% csrf_token %}
+
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <label for="{{ form.owner.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300">
+                        Właściciel pojazdu *
+                    </label>
+                    <a href="{% url 'customer_create' %}" class="text-xs font-mono text-amber-accent hover:underline">
+                        + Nowy klient
+                    </a>
+                </div>
+                {{ form.owner }}
+                {% if form.owner.errors %}
+                    <p class="text-xs font-mono text-red-400 mt-1">{{ form.owner.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="{{ form.make.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300 mb-2">Marka *</label>
+                    {{ form.make }}
+                    {% if form.make.errors %}<p class="text-xs font-mono text-red-400 mt-1">{{ form.make.errors.0 }}</p>{% endif %}
+                </div>
+                <div>
+                    <label for="{{ form.model.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300 mb-2">Model *</label>
+                    {{ form.model }}
+                    {% if form.model.errors %}<p class="text-xs font-mono text-red-400 mt-1">{{ form.model.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label for="{{ form.license_plate.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300 mb-2">Numer rej. *</label>
+                    {{ form.license_plate }}
+                    {% if form.license_plate.errors %}<p class="text-xs font-mono text-red-400 mt-1">{{ form.license_plate.errors.0 }}</p>{% endif %}
+                </div>
+                <div>
+                    <label for="{{ form.paint_code.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300 mb-2">Kod lakieru</label>
+                    {{ form.paint_code }}
+                    {% if form.paint_code.errors %}<p class="text-xs font-mono text-red-400 mt-1">{{ form.paint_code.errors.0 }}</p>{% endif %}
+                </div>
+                <div>
+                    <label for="{{ form.vin.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300 mb-2">VIN</label>
+                    {{ form.vin }}
+                    {% if form.vin.errors %}<p class="text-xs font-mono text-red-400 mt-1">{{ form.vin.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-6 border-t border-stone-800">
+                <a href="{% url 'order_create' %}" class="text-xs font-mono text-stone-500 hover:text-stone-300 uppercase tracking-wider">
+                    ← Powrót do zlecenia
+                </a>
+                <button type="submit" class="bg-amber-accent hover:bg-amber-accentHover text-stone-950 font-display font-bold text-xs uppercase tracking-wider px-6 py-3 transition">
+                    Zapisz pojazd
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

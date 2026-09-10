@@ -1,41 +1,109 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="pl" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}DetailFlow – Studio Management System{% endblock %}</title>
-    <!-- Tailwind CSS z CDN dla nowoczesnego wyglądu bez konfigurowania node/npm -->
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-900 text-gray-100 min-h-screen">
-    <!-- Pasek nawigacji -->
-    <nav class="bg-gray-800 border-b border-gray-700 px-6 py-4 flex justify-between items-center">
-        <div class="flex items-center space-x-3">
-            <a href="{% url 'dashboard' %}" class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">DetailFlow</a>
-            <span class="text-xs bg-blue-900/60 text-blue-300 font-semibold px-2.5 py-0.5 rounded border border-blue-700">MVT Core</span>
-        </div>
-        <div class="space-x-3">
-            <a href="{% url 'dashboard' %}" class="text-gray-300 hover:text-white px-3 py-2 text-sm font-medium transition">Pulpit</a>
-            <a href="{% url 'order_create' %}" class="bg-blue-600 hover:bg-blue-500 text-white font-medium px-4 py-2 rounded-lg text-sm transition shadow">+ Przyjmij auto</a>
-            <a href="/admin/" target="_blank" class="text-xs text-gray-400 hover:text-gray-200 border border-gray-700 px-3 py-2 rounded-lg transition">Panel Admina ↗</a>
-        </div>
-    </nav>
+    <title>{% block title %}DetailFlow — Studio Operacyjne{% endblock %}</title>
 
-    <!-- Komunikaty flash messages -->
-    <div class="max-w-7xl mx-auto px-6 mt-4">
-        {% if messages %}
-            {% for message in messages %}
-                <div class="p-4 mb-4 text-sm rounded-lg bg-green-900/80 border border-green-700 text-green-200 flex items-center justify-between">
+    <!-- Typografia techniczna: Space Grotesk + IBM Plex Sans + JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"IBM Plex Sans"', 'sans-serif'],
+                        display: ['"Space Grotesk"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        stone: {
+                            950: '#0A0C0E',
+                            900: '#12151A',
+                            850: '#181C23',
+                            800: '#202630',
+                            700: '#2E3644',
+                            600: '#475366',
+                        },
+                        amber: {
+                            accent: '#E5A93C',
+                            accentHover: '#D49625',
+                            dim: '#2A2111',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+            background-color: #0A0C0E;
+            color: #E2E8F0;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans antialiased border-t-2 border-[#E5A93C]">
+
+    <!-- Pasek statusowy i nawigacja warsztatu -->
+    <header class="border-b border-stone-800 bg-stone-900 sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-6">
+                <a href="{% url 'dashboard' %}" class="flex items-center gap-2 group">
+                    <span class="w-2.5 h-2.5 bg-amber-accent inline-block"></span>
+                    <span class="font-display font-bold tracking-wider text-base text-white uppercase group-hover:text-amber-accent transition-colors">DETAILFLOW</span>
+                    <span class="text-xs font-mono text-stone-500 hidden sm:inline">/ SYS.01</span>
+                </a>
+                <span class="hidden md:inline-block h-4 w-px bg-stone-800"></span>
+                <nav class="hidden md:flex items-center gap-4 text-xs font-medium uppercase tracking-wider text-stone-400">
+                    <a href="{% url 'dashboard' %}" class="hover:text-white transition-colors">Hala operacyjna</a>
+                    <a href="/admin/" target="_blank" class="hover:text-stone-300 text-stone-500 transition-colors">Kartoteka [Admin] ↗</a>
+                </nav>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <a href="{% url 'order_create' %}"
+                   class="bg-amber-accent hover:bg-amber-accentHover text-stone-950 font-display font-semibold text-xs tracking-wider uppercase px-4 py-2.5 transition flex items-center gap-2">
+                    <span>+ Przyjmij pojazd</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Komunikaty systemowe / Alert Banner -->
+    {% if messages %}
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 w-full">
+        {% for message in messages %}
+            <div class="px-4 py-3 border border-stone-700 bg-stone-900 text-stone-300 text-xs font-mono flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="text-amber-accent">■</span>
                     <span>{{ message }}</span>
                 </div>
-            {% endfor %}
-        {% endif %}
+            </div>
+        {% endfor %}
     </div>
+    {% endif %}
 
-    <!-- Główna zawartość wyrenderowana z widoków potomnych -->
-    <main class="max-w-7xl mx-auto px-6 py-6">
+    <!-- Główny obszar roboczy -->
+    <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
         {% block content %}
         {% endblock %}
     </main>
+
+    <!-- Stopka statusowa -->
+    <footer class="border-t border-stone-850 bg-stone-950 py-6 text-stone-600 text-xs font-mono">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div>DETAILFLOW WORKSHOP OS — WERSJA ROBOCZA MVT</div>
+            <div class="flex items-center gap-4">
+                <span>ASYNC WORKER: CELERY/REDIS</span>
+                <span>•</span>
+                <span>MAIL ENGINE: MAILPIT:1025</span>
+            </div>
+        </div>
+    </footer>
 </body>
 </html>

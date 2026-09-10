@@ -1,61 +1,124 @@
 {% extends 'base.html' %}
 
-{% block title %}Przyjęcie pojazdu – DetailFlow{% endblock %}
+{% block title %}Karta przyjęcia zlecenia — DetailFlow{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto bg-gray-800 p-8 rounded-xl border border-gray-700 shadow-xl">
-    <h1 class="text-xl font-bold text-white mb-1">Przyjęcie pojazdu do studia</h1>
-    <p class="text-sm text-gray-400 mb-6 border-b border-gray-700 pb-4">Nowe zlecenie detailingowe — pojazd musi istnieć w kartotece (panel admina).</p>
+<div class="max-w-3xl mx-auto">
+    <!-- Nagłówek dokumentu -->
+    <div class="border-b border-stone-800 pb-4 mb-6 flex justify-between items-end">
+        <div>
+            <p class="text-xs font-mono uppercase tracking-widest text-amber-accent">// DOKUMENT WEWNĘTRZNY</p>
+            <h1 class="text-2xl font-display font-bold uppercase tracking-tight text-white mt-1">Przyjęcie pojazdu do studia</h1>
+        </div>
+        <div class="text-right">
+            <span class="text-xs font-mono text-stone-500 block">KOD PROCEDURY</span>
+            <span class="text-xs font-mono text-stone-300">ORD-INSPECTION</span>
+        </div>
+    </div>
 
-    <form method="POST" class="space-y-5" novalidate>
-        {% csrf_token %}
+    <!-- Arkusz przyjęcia -->
+    <div class="border border-stone-800 bg-stone-900 p-6 sm:p-8">
+        <form method="POST" class="space-y-6" novalidate>
+            {% csrf_token %}
 
-        {% if form.non_field_errors %}
-            <div class="p-3 rounded-lg bg-red-950/70 border border-red-800 text-red-200 text-sm">
-                {{ form.non_field_errors }}
-            </div>
-        {% endif %}
+            {% if form.non_field_errors %}
+                <div class="p-3 border border-red-900 bg-red-950/40 text-red-300 text-xs font-mono">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
 
-        {% for field in form %}
-            <div>
-                <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-300 mb-1.5">{{ field.label }}</label>
-                {{ field }}
-                {% if field.errors %}
-                    <p class="text-xs text-red-400 mt-1">{{ field.errors.0 }}</p>
+            <!-- Wybór auta + akcja szybkiego dodania -->
+            <div class="border-b border-stone-800/80 pb-6">
+                <div class="flex justify-between items-center mb-2">
+                    <label for="{{ form.vehicle.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300">
+                        01. Wybór pojazdu z kartoteki *
+                    </label>
+                    <a href="{% url 'vehicle_create' %}" class="text-xs font-mono text-amber-accent hover:underline">
+                        + Nowy pojazd
+                    </a>
+                </div>
+                {{ form.vehicle }}
+                {% if form.vehicle.errors %}
+                    <p class="text-xs font-mono text-red-400 mt-1">{{ form.vehicle.errors.0 }}</p>
                 {% endif %}
             </div>
-        {% endfor %}
 
-        <p class="text-xs text-gray-500">
-            Brak pojazdu na liście?
-            <a href="/admin/workshop/vehicle/add/" target="_blank" class="text-blue-400 hover:text-blue-300 underline">Dodaj auto w panelu admina ↗</a>
-        </p>
+            <!-- Zakres prac -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2">
+                    <label for="{{ form.service_name.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300 mb-2">
+                        02. Pakiet detailingowy / Usługa główna *
+                    </label>
+                    {{ form.service_name }}
+                    {% if form.service_name.errors %}
+                        <p class="text-xs font-mono text-red-400 mt-1">{{ form.service_name.errors.0 }}</p>
+                    {% endif %}
+                </div>
 
-        <div class="flex justify-end space-x-3 pt-6 border-t border-gray-700">
-            <a href="{% url 'dashboard' %}" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm text-gray-200 transition">Anuluj</a>
-            <button type="submit" class="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg text-sm transition shadow">Zapisz zlecenie</button>
-        </div>
-    </form>
+                <div class="md:col-span-2">
+                    <label for="{{ form.description.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300 mb-2">
+                        03. Uwagi techniczne i inspekcja wstępna
+                    </label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                        <p class="text-xs font-mono text-red-400 mt-1">{{ form.description.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Finanse i harmonogram -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-stone-800/80 pt-6">
+                <div>
+                    <label for="{{ form.price_total.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300 mb-2">
+                        Wycena (PLN) *
+                    </label>
+                    {{ form.price_total }}
+                    {% if form.price_total.errors %}
+                        <p class="text-xs font-mono text-red-400 mt-1">{{ form.price_total.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.deposit_paid.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300 mb-2">
+                        Pobrany zadatek (PLN)
+                    </label>
+                    {{ form.deposit_paid }}
+                    {% if form.deposit_paid.errors %}
+                        <p class="text-xs font-mono text-red-400 mt-1">{{ form.deposit_paid.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.status.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300 mb-2">
+                        Status startowy
+                    </label>
+                    {{ form.status }}
+                    {% if form.status.errors %}
+                        <p class="text-xs font-mono text-red-400 mt-1">{{ form.status.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div>
+                <label for="{{ form.scheduled_start.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300 mb-2">
+                    Termin wjazdu na halę
+                </label>
+                {{ form.scheduled_start }}
+                {% if form.scheduled_start.errors %}
+                    <p class="text-xs font-mono text-red-400 mt-1">{{ form.scheduled_start.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Panel akcji -->
+            <div class="flex items-center justify-between pt-6 border-t border-stone-800">
+                <a href="{% url 'dashboard' %}" class="text-xs font-mono text-stone-500 hover:text-stone-300 uppercase tracking-wider">
+                    ← Anuluj i wróć
+                </a>
+                <button type="submit" class="bg-amber-accent hover:bg-amber-accentHover text-stone-950 font-display font-bold text-xs uppercase tracking-wider px-6 py-3 transition">
+                    Zapisz zlecenie w systemie
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
-
-<style>
-    .form-input {
-        width: 100%;
-        background-color: #111827;
-        border: 1px solid #374151;
-        border-radius: 0.5rem;
-        padding: 0.65rem 0.85rem;
-        color: #f3f4f6;
-        font-size: 0.875rem;
-        outline: none;
-    }
-    .form-input:focus {
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
-    }
-    select.form-input option {
-        background-color: #111827;
-        color: #f3f4f6;
-    }
-</style>
 {% endblock %}

@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}Zlecenie #{{ order.id|stringformat:"03d" }} — DetailFlow{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+
+    <!-- Pasek powrotu i nagłówek zlecenia -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-800 pb-4">
+        <div>
+            <div class="flex items-center gap-3">
+                <a href="{% url 'dashboard' %}" class="text-xs font-mono text-stone-500 hover:text-stone-300">← Wróć do hali</a>
+                <span class="text-stone-700">/</span>
+                <span class="text-xs font-mono text-amber-accent uppercase">KARTA ZLECENIA #{{ order.id|stringformat:"03d" }}</span>
+            </div>
+            <h1 class="text-2xl font-display font-bold uppercase text-white mt-1">
+                {{ order.vehicle.make }} {{ order.vehicle.model }}
+                <span class="text-stone-500 font-mono text-lg font-normal">[{{ order.vehicle.license_plate }}]</span>
+            </h1>
+        </div>
+
+        <!-- Przycisk pobrania certyfikatu PDF -->
+        <div>
+            <a href="{% url 'order_certificate_pdf' order.id %}" target="_blank"
+               class="inline-flex items-center gap-2 bg-stone-850 hover:bg-stone-800 text-amber-accent border border-stone-700 hover:border-amber-accent font-mono text-xs uppercase px-4 py-2.5 transition">
+                <span>Pobierz Certyfikat Aplikacji (PDF)</span>
+                <span>↗</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Siatka parametrów zlecenia -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Karta 1: Właściciel -->
+        <div class="border border-stone-800 bg-stone-900 p-4">
+            <p class="text-[11px] font-mono text-stone-500 uppercase mb-2">01. Właściciel pojazdu</p>
+            <div class="text-white font-medium text-sm">{{ order.vehicle.owner.first_name }} {{ order.vehicle.owner.last_name }}</div>
+            <div class="text-xs font-mono text-stone-400 mt-1">{{ order.vehicle.owner.phone }}</div>
+            <div class="text-xs font-mono text-stone-500">{{ order.vehicle.owner.email }}</div>
+        </div>
+
+        <!-- Karta 2: Finanse -->
+        <div class="border border-stone-800 bg-stone-900 p-4">
+            <p class="text-[11px] font-mono text-stone-500 uppercase mb-2">02. Rozliczenie usługi</p>
+            <div class="text-xl font-mono font-bold text-white">{{ order.price_total }} PLN</div>
+            <div class="text-xs font-mono text-stone-400 mt-1">Wpłacony zadatek: {{ order.deposit_paid|default:"0.00" }} PLN</div>
+            <div class="text-xs font-mono text-amber-accent mt-0.5">Do uregulowania: {{ remaining_balance }} PLN</div>
+        </div>
+
+        <!-- Karta 3: Status i termin -->
+        <div class="border border-stone-800 bg-stone-900 p-4">
+            <p class="text-[11px] font-mono text-stone-500 uppercase mb-2">03. Status hali</p>
+            <div class="text-sm font-mono uppercase font-bold text-white">{{ order.get_status_display }}</div>
+            <div class="text-xs font-mono text-stone-400 mt-1">Termin startu: {{ order.scheduled_start|date:"d.m.Y H:i" }}</div>
+            {% if order.completed_at %}
+                <div class="text-xs font-mono text-stone-500">Wydano: {{ order.completed_at|date:"d.m.Y H:i" }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Sekcja: Pomiary lakieru przed polerowaniem (µm) -->
+    <div class="border border-stone-800 bg-stone-900 p-6">
+        <div class="border-b border-stone-800 pb-3 mb-4 flex justify-between items-center">
+            <div>
+                <p class="text-xs font-mono uppercase tracking-widest text-amber-accent">// PROTOKÓŁ INSPEKCJI</p>
+                <h2 class="text-lg font-display font-bold uppercase text-white">Grubość powłoki lakierniczej (Zakresy µm)</h2>
+            </div>
+            <span class="text-xs font-mono text-stone-500">STAN PRZED KOREKTĄ</span>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 font-mono">
+            <div class="border border-stone-800 bg-stone-950 p-3">
+                <span class="text-[10px] text-stone-500 block uppercase">Maska</span>
+                <span class="text-sm text-white font-bold">{{ cert.thickness_hood }} µm</span>
+            </div>
+            <div class="border border-stone-800 bg-stone-950 p-3">
+                <span class="text-[10px] text-stone-500 block uppercase">Dach</span>
+                <span class="text-sm text-white font-bold">{{ cert.thickness_roof }} µm</span>
+            </div>
+            <div class="border border-stone-800 bg-stone-950 p-3">
+                <span class="text-[10px] text-stone-500 block uppercase">Klapa bagażnika</span>
+                <span class="text-sm text-white font-bold">{{ cert.thickness_trunk }} µm</span>
+            </div>
+            <div class="border border-stone-800 bg-stone-950 p-3">
+                <span class="text-[10px] text-stone-500 block uppercase">Drzwi lewe</span>
+                <span class="text-sm text-white font-bold">{{ cert.thickness_doors_left }} µm</span>
+            </div>
+            <div class="border border-stone-800 bg-stone-950 p-3">
+                <span class="text-[10px] text-stone-500 block uppercase">Drzwi prawe</span>
+                <span class="text-sm text-white font-bold">{{ cert.thickness_doors_right }} µm</span>
+            </div>
+            <div class="border border-stone-800 bg-stone-950 p-3">
+                <span class="text-[10px] text-stone-500 block uppercase">Błotniki</span>
+                <span class="text-sm text-white font-bold">{{ cert.thickness_fenders }} µm</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sekcja: Aplikacja powłoki i wytyczne -->
+    <div class="border border-stone-800 bg-stone-900 p-6">
+        <div class="border-b border-stone-800 pb-3 mb-4">
+            <p class="text-xs font-mono uppercase tracking-widest text-amber-accent">// SPECYFIKACJA ZABEZPIECZENIA</p>
+            <h2 class="text-lg font-display font-bold uppercase text-white">Powłoka ceramiczna i zalecenia</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs font-mono">
+            <div class="space-y-3">
+                <div>
+                    <span class="text-stone-500 block uppercase text-[10px]">Zaaplikowany produkt:</span>
+                    <span class="text-white font-medium text-sm">{{ cert.coating_product }}</span>
+                </div>
+                <div class="grid grid-cols-3 gap-2 pt-2 border-t border-stone-800">
+                    <div>
+                        <span class="text-stone-500 block uppercase text-[10px]">Warstwy:</span>
+                        <span class="text-white font-bold">{{ cert.coating_layers }}</span>
+                    </div>
+                    <div>
+                        <span class="text-stone-500 block uppercase text-[10px]">Gwarancja:</span>
+                        <span class="text-white font-bold">{{ cert.warranty_months }} mies.</span>
+                    </div>
+                    <div>
+                        <span class="text-stone-500 block uppercase text-[10px]">Utwardzanie:</span>
+                        <span class="text-white font-bold">{{ cert.curing_time_hours }} h</span>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <span class="text-stone-500 block uppercase text-[10px] mb-1">Wytyczne pielęgnacyjne powłoki:</span>
+                <div class="border border-stone-800 bg-stone-950 p-3 text-stone-400 whitespace-pre-line text-[11px] leading-relaxed">
+                    {{ cert.maintenance_guide }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

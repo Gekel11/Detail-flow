@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Certyfikat Aplikacji Powłoki Ceramicznej</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 18mm 16mm;
+            @bottom-right {
+                content: "Strona " counter(page);
+                font-family: monospace;
+                font-size: 8pt;
+                color: #71717A;
+            }
+        }
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #18181B;
+            font-size: 9pt;
+            line-height: 1.4;
+            background: #FFFFFF;
+        }
+        .header-table {
+            width: 100%;
+            border-bottom: 2px solid #18181B;
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+        }
+        .brand-title {
+            font-size: 16pt;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .cert-id {
+            font-family: monospace;
+            font-size: 9pt;
+            color: #71717A;
+            text-align: right;
+        }
+        h2 {
+            font-size: 10pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: #F4F4F5;
+            padding: 4px 8px;
+            margin: 16px 0 8px 0;
+            border-left: 3px solid #D97706;
+        }
+        .grid-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+        .grid-table td {
+            padding: 4px 6px;
+            vertical-align: top;
+            border-bottom: 1px solid #E4E4E7;
+        }
+        .grid-table .label {
+            width: 35%;
+            font-weight: 600;
+            color: #52525B;
+        }
+        .grid-table .value {
+            font-family: monospace;
+            font-weight: 600;
+        }
+        .inspection-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 4px;
+        }
+        .inspection-table th {
+            background: #FAFAFA;
+            border: 1px solid #D4D4D8;
+            padding: 5px;
+            font-size: 8pt;
+            text-align: left;
+            font-family: monospace;
+        }
+        .inspection-table td {
+            border: 1px solid #E4E4E7;
+            padding: 6px;
+            font-family: monospace;
+            font-size: 9pt;
+        }
+        .guide-box {
+            background: #FAFAFA;
+            border: 1px solid #E4E4E7;
+            padding: 10px;
+            font-size: 8.5pt;
+            white-space: pre-line;
+            color: #27272A;
+        }
+        .signature-table {
+            width: 100%;
+            margin-top: 30px;
+        }
+        .signature-table td {
+            width: 50%;
+            padding: 10px 20px;
+            text-align: center;
+        }
+        .signature-line {
+            border-top: 1px dashed #71717A;
+            margin-top: 40px;
+            font-size: 8pt;
+            color: #71717A;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+
+    <table class="header-table">
+        <tr>
+            <td>
+                <div class="brand-title">DETAILFLOW // CERTYFIKAT USŁUGI</div>
+                <div style="font-size: 8pt; color: #71717A;">PROTOKÓŁ INSPEKCJI LAKIERU I ZABEZPIECZENIA POWIERZCHNI</div>
+            </td>
+            <td class="cert-id">
+                DOKUMENT: <strong>DF-CERT-{{ cert.id|stringformat:"04d" }}</strong><br>
+                DATA: {{ cert.issued_at|date:"d.m.Y" }}
+            </td>
+        </tr>
+    </table>
+
+    <h2>1. Dane identyfikacyjne pojazdu i zlecenia</h2>
+    <table class="grid-table">
+        <tr>
+            <td class="label">Pojazd:</td>
+            <td class="value">{{ vehicle.make }} {{ vehicle.model }}</td>
+            <td class="label">Właściciel:</td>
+            <td class="value">{{ customer.first_name }} {{ customer.last_name }}</td>
+        </tr>
+        <tr>
+            <td class="label">Numer rejestracyjny:</td>
+            <td class="value">{{ vehicle.license_plate }}</td>
+            <td class="label">Telefon kontaktowy:</td>
+            <td class="value">{{ customer.phone }}</td>
+        </tr>
+        <tr>
+            <td class="label">Kod lakieru / VIN:</td>
+            <td class="value">{{ vehicle.paint_code|default:"Brak" }} / {{ vehicle.vin|default:"Brak" }}</td>
+            <td class="label">Numer zlecenia:</td>
+            <td class="value">#{{ order.id }} ({{ order.service_name }})</td>
+        </tr>
+    </table>
+
+    <h2>2. Wstępna inspekcja grubości powłoki lakierniczej przed polerowaniem (µm)</h2>
+    <table class="inspection-table">
+        <thead>
+            <tr>
+                <th>Element nadwozia</th>
+                <th>Zakres mikronowy</th>
+                <th>Element nadwozia</th>
+                <th>Zakres mikronowy</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Maska silnika</td>
+                <td><strong>{{ cert.thickness_hood }} µm</strong></td>
+                <td>Drzwi lewe (przód/tył)</td>
+                <td><strong>{{ cert.thickness_doors_left }} µm</strong></td>
+            </tr>
+            <tr>
+                <td>Dach</td>
+                <td><strong>{{ cert.thickness_roof }} µm</strong></td>
+                <td>Drzwi prawe (przód/tył)</td>
+                <td><strong>{{ cert.thickness_doors_right }} µm</strong></td>
+            </tr>
+            <tr>
+                <td>Klapa bagażnika</td>
+                <td><strong>{{ cert.thickness_trunk }} µm</strong></td>
+                <td>Błotniki (L/P)</td>
+                <td><strong>{{ cert.thickness_fenders }} µm</strong></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>3. Specyfikacja powłoki ceramicznej</h2>
+    <table class="grid-table">
+        <tr>
+            <td class="label">Zastosowany produkt:</td>
+            <td class="value">{{ cert.coating_product }}</td>
+            <td class="label">Liczba warstw:</td>
+            <td class="value">{{ cert.coating_layers }}</td>
+        </tr>
+        <tr>
+            <td class="label">Gwarancja ochrony:</td>
+            <td class="value">{{ cert.warranty_months }} miesięcy</td>
+            <td class="label">Czas utwardzania:</td>
+            <td class="value">{{ cert.curing_time_hours }} godzin w studio</td>
+        </tr>
+    </table>
+
+    <h2>4. Instrukcja pielęgnacji i warunki zachowania gwarancji</h2>
+    <div class="guide-box">
+        {{ cert.maintenance_guide }}
+    </div>
+
+    <table class="signature-table">
+        <tr>
+            <td>
+                <div class="signature-line">Podpis technika detailingu</div>
+            </td>
+            <td>
+                <div class="signature-line">Podpis i potwierdzenie odbioru klienta</div>
+            </td>
+        </tr>
+    </table>
+
+</body>
+</html>
