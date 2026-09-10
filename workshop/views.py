@@ -74,25 +74,33 @@ def order_checkin_view(request, order_id):
         'inspection': inspection,
     })
 
+from .models import ChemicalProduct, MaterialUsage
 
 def order_detail_view(request, order_id):
-    order = get_object_or_404(ServiceOrder.objects.select_related('vehicle__owner'), id=order_id)
+    order = get_object_or_404(
+        ServiceOrder.objects.select_related('vehicle__owner').prefetch_related('material_usages__product', 'damage_points'),
+        id=order_id
+    )
 
-    # Bezpieczne pobranie powiązanych obiektów
+    # Bezpieczne pobranie powiazanych obiektow
     inspection = getattr(order, 'paint_inspection', None)
     certificate = getattr(order, 'coating_certificate', None)
 
-    # Jeśli zlecenie wymaga certyfikatu, a jeszcze go nie ma, twórz go automatycznie
+    # Jesli zlecenie wymaga certyfikatu, a jeszcze go nie ma, tworz go automatycznie
     if order.requires_coating_certificate and not certificate:
         certificate, _ = CoatingCertificate.objects.get_or_create(order=order)
 
     remaining_balance = order.price_total - (order.deposit_paid or 0)
+
+    # Pobranie dostepnej chemii ze stanem wiekszym niz 0
+    available_products = ChemicalProduct.objects.filter(current_stock__gt=0).order_by('name')
 
     return render(request, 'workshop/order_detail.html', {
         'order': order,
         'inspection': inspection,
         'cert': certificate,
         'remaining_balance': remaining_balance,
+        'available_products': available_products,
     })
 
 
@@ -218,3 +226,34 @@ def generate_ai_blueprint_view(request, order_id):
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
+from decimal import Decimal
+from django.db.models import Sum, F
+from django.views.decorators.http import require_POST
+from .models import ChemicalProduct, MaterialUsage
+
+@require_POST
+def add_material_usage_view(request, order_id):
+    order = get_object_or_404(ServiceOrder, id=order_id)
+    product_id = request.POST.get('product_id')
+    quantity = Decimal(request.POST.get('quantity', '0'))
+
+    if quantity <= 0:
+        return JsonResponse({'status': 'error', 'message': 'Ilość musi być większa od zera.'}, status=400)
+
+    product = get_object_or_404(ChemicalProduct, id=product_id)
+    usage = MaterialUsage.objects.create(
+        order=order,
+        product=product,
+        quantity_used=quantity
+    )
+
+    return JsonResponse({
+        'status': 'ok',
+        'item': {
+            'id': usage.id,
+            'name': product.name,
+            'quantity': float(usage.quantity_used),
+            'unit': product.get_unit_display(),
+            'cost': float(usage.total_cost)
+        }
+    })

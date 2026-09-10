@@ -174,3 +174,63 @@ class CarBlueprint(models.Model):
 
     def __str__(self):
         return f"Blueprint: {self.make} {self.model}"
+
+from decimal import Decimal
+from django.core.validators import MinValueValidator
+
+class ChemicalProduct(models.Model):
+    """Produkt chemiczny / materiał w magazynie (np. powłoka ceramiczna, pad, pasta)"""
+    UNIT_CHOICES = [
+        ('ML', 'Mililitry (ml)'),
+        ('PCS', 'Sztuki (szt.)'),
+        ('G', 'Gramy (g)'),
+    ]
+
+    name = models.CharField(max_length=128, verbose_name="Nazwa produktu")
+    category = models.CharField(max_length=64, verbose_name="Kategoria (np. Powłoka, Pasta, Pad)")
+    current_stock = models.DecimalField(max_digits=8, decimal_places=2, verbose_name="Stan magazynowy")
+    unit = models.CharField(max_length=8, choices=UNIT_CHOICES, default='ML', verbose_name="Jednostka")
+    cost_per_unit = models.DecimalField(
+        max_digits=8, decimal_places=4,
+        verbose_name="Koszt jednostkowy zakupu netto (PLN)"
+    )
+
+    class Meta:
+        verbose_name = "Produkt magazynowy"
+        verbose_name_plural = "Magazyn chemii i materiałów"
+
+    def __str__(self):
+        return f"{self.name} ({self.current_stock} {self.get_unit_display()})"
+
+
+class MaterialUsage(models.Model):
+    """Zarejestrowane zużycie materiału na konkretnym zleceniu"""
+    order = models.ForeignKey(ServiceOrder, on_delete=models.CASCADE, related_name='material_usages')
+    product = models.ForeignKey(ChemicalProduct, on_delete=models.PROTECT, related_name='usages')
+    quantity_used = models.DecimalField(
+        max_digits=8, decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        verbose_name="Zużyta ilość"
+    )
+    unit_cost_snapshot = models.DecimalField(
+        max_digits=8, decimal_places=4,
+        verbose_name="Zatrzaśnięty koszt jednostkowy (PLN)"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def total_cost(self):
+        return (self.quantity_used * self.unit_cost_snapshot).quantize(Decimal('0.01'))
+
+    def save(self, *args, **kwargs):
+        if not self.unit_cost_snapshot:
+            self.unit_cost_snapshot = self.product.cost_per_unit
+        # Automatyczne zdjęcie ze stanu magazynowego przy pierwszym zapisie
+        if not self.pk:
+            self.product.current_stock = max(Decimal('0.00'), self.product.current_stock - self.quantity_used)
+            self.product.save(update_fields=['current_stock'])
+        super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name = "Zużycie materiału"
+        verbose_name_plural = "Zużycie materiałów"

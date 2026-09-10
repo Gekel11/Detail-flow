@@ -3,136 +3,249 @@
 {% block title %}Zlecenie #{{ order.id|stringformat:"03d" }} — DetailFlow{% endblock %}
 
 {% block content %}
-<div class="max-w-5xl mx-auto space-y-6">
+<div class="max-w-6xl mx-auto space-y-6">
 
-    <!-- Pasek powrotu i nagłówek zlecenia -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-800 pb-4">
+    <!-- Nagłówek Zlecenia -->
+    <div class="border-b border-stone-800 pb-4 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-            <div class="flex items-center gap-3">
-                <a href="{% url 'dashboard' %}" class="text-xs font-mono text-stone-500 hover:text-stone-300">← Wróć do hali</a>
-                <span class="text-stone-700">/</span>
-                <span class="text-xs font-mono text-amber-accent uppercase">KARTA ZLECENIA #{{ order.id|stringformat:"03d" }}</span>
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-mono uppercase tracking-widest text-amber-accent">// KARTA ROBOCZA POJAZDU</span>
+                <span class="text-[10px] font-mono px-2 py-0.5 bg-stone-900 border border-stone-700 text-stone-300">
+                    STATUS: {{ order.get_status_display|default:order.status }}
+                </span>
             </div>
             <h1 class="text-2xl font-display font-bold uppercase text-white mt-1">
                 {{ order.vehicle.make }} {{ order.vehicle.model }}
-                <span class="text-stone-500 font-mono text-lg font-normal">[{{ order.vehicle.license_plate }}]</span>
             </h1>
+            <p class="text-xs font-mono text-stone-400 mt-1">
+                Nr rej: <span class="text-amber-accent font-bold">{{ order.vehicle.license_plate }}</span> ·
+                Klient: <span class="text-white">{{ order.vehicle.owner.first_name }} {{ order.vehicle.owner.last_name }}</span> ·
+                Telefon: <span class="text-stone-300">{{ order.vehicle.owner.phone_number|default:"Brak" }}</span>
+            </p>
         </div>
 
-        <!-- Przycisk pobrania certyfikatu PDF -->
-        <div>
-            <a href="{% url 'order_certificate_pdf' order.id %}" target="_blank"
-               class="inline-flex items-center gap-2 bg-stone-850 hover:bg-stone-800 text-amber-accent border border-stone-700 hover:border-amber-accent font-mono text-xs uppercase px-4 py-2.5 transition">
-                <span>Pobierz Certyfikat Aplikacji (PDF)</span>
-                <span>↗</span>
+        <div class="flex items-center gap-3">
+            <a href="{% url 'order_checkin' order.id %}"
+               class="bg-stone-900 hover:bg-stone-850 text-stone-300 border border-stone-700 px-4 py-2 text-xs font-mono uppercase transition flex items-center gap-2">
+                <span>🔍 Inspekcja wjazdowa / Mapa</span>
+            </a>
+            <a href="{% url 'dashboard' %}"
+               class="text-xs font-mono text-stone-500 hover:text-stone-300 uppercase px-2 py-2">
+                ← Powrót do hali
             </a>
         </div>
     </div>
 
-    <!-- Siatka parametrów zlecenia -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <!-- Karta 1: Właściciel -->
-        <div class="border border-stone-800 bg-stone-900 p-4">
-            <p class="text-[11px] font-mono text-stone-500 uppercase mb-2">01. Właściciel pojazdu</p>
-            <div class="text-white font-medium text-sm">{{ order.vehicle.owner.first_name }} {{ order.vehicle.owner.last_name }}</div>
-            <div class="text-xs font-mono text-stone-400 mt-1">{{ order.vehicle.owner.phone }}</div>
-            <div class="text-xs font-mono text-stone-500">{{ order.vehicle.owner.email }}</div>
+    <!-- Główna siatka: Dane zlecenia + Kalkulator COGS -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+
+        <!-- Lewa kolumna: Informacje ogólne i finanse -->
+        <div class="space-y-6 font-mono text-xs">
+
+            <!-- Karta podsumowania finansowego -->
+            <div class="border border-stone-800 bg-stone-900 p-5 space-y-4">
+                <div class="border-b border-stone-800 pb-2">
+                    <h3 class="text-xs font-bold uppercase text-white tracking-wider">// RENTOWNOŚĆ I ROZLICZENIE</h3>
+                </div>
+
+                <div class="space-y-2.5">
+                    <div class="flex justify-between items-center text-stone-400">
+                        <span>Wycena usługi (brutto):</span>
+                        <span class="text-white font-bold">{{ order.price_total|default:"0.00" }} PLN</span>
+                    </div>
+                    <div class="flex justify-between items-center text-stone-400">
+                        <span>Koszt materiałów (COGS):</span>
+                        <span id="summary-cogs-value" class="text-red-400 font-bold">0.00 PLN</span>
+                    </div>
+                    <div class="pt-2 border-t border-stone-800 flex justify-between items-center text-xs">
+                        <span class="text-amber-accent font-bold uppercase">Marża wstępna:</span>
+                        <span id="summary-margin-value" class="text-emerald-400 font-bold">-- PLN</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Karta stanu inspekcji lakieru -->
+            <div class="border border-stone-800 bg-stone-900 p-5 space-y-3">
+                <div class="border-b border-stone-800 pb-2 flex justify-between items-center">
+                    <h3 class="text-xs font-bold uppercase text-white tracking-wider">// PROTOKÓŁ LAKIERU</h3>
+                    <span class="text-[10px] text-stone-500">{{ order.damage_points.count }} wad</span>
+                </div>
+
+                <ul class="space-y-2 text-stone-400">
+                    <li class="flex justify-between">
+                        <span>Zarejestrowane uszkodzenia:</span>
+                        <span class="text-stone-200 font-bold">{{ order.damage_points.count }} pkt</span>
+                    </li>
+                    <li class="flex justify-between">
+                        <span>Średnia grubość (maska):</span>
+                        <span class="text-stone-200 font-bold">{{ order.thickness_hood|default:"N/D" }} µm</span>
+                    </li>
+                    <li class="flex justify-between">
+                        <span>Średnia grubość (dach):</span>
+                        <span class="text-stone-200 font-bold">{{ order.thickness_roof|default:"N/D" }} µm</span>
+                    </li>
+                </ul>
+            </div>
+
         </div>
 
-        <!-- Karta 2: Finanse -->
-        <div class="border border-stone-800 bg-stone-900 p-4">
-            <p class="text-[11px] font-mono text-stone-500 uppercase mb-2">02. Rozliczenie usługi</p>
-            <div class="text-xl font-mono font-bold text-white">{{ order.price_total }} PLN</div>
-            <div class="text-xs font-mono text-stone-400 mt-1">Wpłacony zadatek: {{ order.deposit_paid|default:"0.00" }} PLN</div>
-            <div class="text-xs font-mono text-amber-accent mt-0.5">Do uregulowania: {{ remaining_balance }} PLN</div>
-        </div>
+        <!-- Prawa kolumna (2 kolumny): Moduł Zużycia Materiałów (COGS) -->
+        <div class="lg:col-span-2 border border-stone-800 bg-stone-900 p-6 space-y-5 font-mono">
 
-        <!-- Karta 3: Status i termin -->
-        <div class="border border-stone-800 bg-stone-900 p-4">
-            <p class="text-[11px] font-mono text-stone-500 uppercase mb-2">03. Status hali</p>
-            <div class="text-sm font-mono uppercase font-bold text-white">{{ order.get_status_display }}</div>
-            <div class="text-xs font-mono text-stone-400 mt-1">Termin startu: {{ order.scheduled_start|date:"d.m.Y H:i" }}</div>
-            {% if order.completed_at %}
-                <div class="text-xs font-mono text-stone-500">Wydano: {{ order.completed_at|date:"d.m.Y H:i" }}</div>
-            {% endif %}
-        </div>
-    </div>
-
-    <!-- Sekcja: Pomiary lakieru przed polerowaniem (µm) -->
-    <div class="border border-stone-800 bg-stone-900 p-6">
-        <div class="border-b border-stone-800 pb-3 mb-4 flex justify-between items-center">
-            <div>
-                <p class="text-xs font-mono uppercase tracking-widest text-amber-accent">// PROTOKÓŁ INSPEKCJI</p>
-                <h2 class="text-lg font-display font-bold uppercase text-white">Grubość powłoki lakierniczej (Zakresy µm)</h2>
-            </div>
-            <span class="text-xs font-mono text-stone-500">STAN PRZED KOREKTĄ</span>
-        </div>
-
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 font-mono">
-            <div class="border border-stone-800 bg-stone-950 p-3">
-                <span class="text-[10px] text-stone-500 block uppercase">Maska</span>
-                <span class="text-sm text-white font-bold">{{ cert.thickness_hood }} µm</span>
-            </div>
-            <div class="border border-stone-800 bg-stone-950 p-3">
-                <span class="text-[10px] text-stone-500 block uppercase">Dach</span>
-                <span class="text-sm text-white font-bold">{{ cert.thickness_roof }} µm</span>
-            </div>
-            <div class="border border-stone-800 bg-stone-950 p-3">
-                <span class="text-[10px] text-stone-500 block uppercase">Klapa bagażnika</span>
-                <span class="text-sm text-white font-bold">{{ cert.thickness_trunk }} µm</span>
-            </div>
-            <div class="border border-stone-800 bg-stone-950 p-3">
-                <span class="text-[10px] text-stone-500 block uppercase">Drzwi lewe</span>
-                <span class="text-sm text-white font-bold">{{ cert.thickness_doors_left }} µm</span>
-            </div>
-            <div class="border border-stone-800 bg-stone-950 p-3">
-                <span class="text-[10px] text-stone-500 block uppercase">Drzwi prawe</span>
-                <span class="text-sm text-white font-bold">{{ cert.thickness_doors_right }} µm</span>
-            </div>
-            <div class="border border-stone-800 bg-stone-950 p-3">
-                <span class="text-[10px] text-stone-500 block uppercase">Błotniki</span>
-                <span class="text-sm text-white font-bold">{{ cert.thickness_fenders }} µm</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sekcja: Aplikacja powłoki i wytyczne -->
-    <div class="border border-stone-800 bg-stone-900 p-6">
-        <div class="border-b border-stone-800 pb-3 mb-4">
-            <p class="text-xs font-mono uppercase tracking-widest text-amber-accent">// SPECYFIKACJA ZABEZPIECZENIA</p>
-            <h2 class="text-lg font-display font-bold uppercase text-white">Powłoka ceramiczna i zalecenia</h2>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs font-mono">
-            <div class="space-y-3">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-stone-800 pb-3">
                 <div>
-                    <span class="text-stone-500 block uppercase text-[10px]">Zaaplikowany produkt:</span>
-                    <span class="text-white font-medium text-sm">{{ cert.coating_product }}</span>
+                    <h2 class="text-sm font-bold uppercase text-white tracking-wider">// ROZLICZENIE MATERIAŁOWE (COGS)</h2>
+                    <p class="text-[11px] text-stone-500 mt-0.5">Zarejestruj ilość chemii, padów i powłok wykorzystanych przy tym aucie.</p>
                 </div>
-                <div class="grid grid-cols-3 gap-2 pt-2 border-t border-stone-800">
-                    <div>
-                        <span class="text-stone-500 block uppercase text-[10px]">Warstwy:</span>
-                        <span class="text-white font-bold">{{ cert.coating_layers }}</span>
-                    </div>
-                    <div>
-                        <span class="text-stone-500 block uppercase text-[10px]">Gwarancja:</span>
-                        <span class="text-white font-bold">{{ cert.warranty_months }} mies.</span>
-                    </div>
-                    <div>
-                        <span class="text-stone-500 block uppercase text-[10px]">Utwardzanie:</span>
-                        <span class="text-white font-bold">{{ cert.curing_time_hours }} h</span>
-                    </div>
+                <div class="text-left sm:text-right">
+                    <span class="text-[10px] text-stone-500 uppercase block">Łączny koszt zużycia:</span>
+                    <span id="cogs-total-header" class="text-sm font-bold text-red-400">0.00 PLN</span>
                 </div>
             </div>
 
-            <div>
-                <span class="text-stone-500 block uppercase text-[10px] mb-1">Wytyczne pielęgnacyjne powłoki:</span>
-                <div class="border border-stone-800 bg-stone-950 p-3 text-stone-400 whitespace-pre-line text-[11px] leading-relaxed">
-                    {{ cert.maintenance_guide }}
+            <!-- Formularz dodawania zużycia materiału -->
+            <form id="form-add-material" onsubmit="handleMaterialSubmit(event)" class="grid grid-cols-1 sm:grid-cols-12 gap-2 text-xs">
+                {% csrf_token %}
+                <div class="sm:col-span-7">
+                    <label class="block text-[10px] uppercase text-stone-500 mb-1">Produkt z magazynu:</label>
+                    <select id="select-product" required class="w-full bg-stone-950 border border-stone-800 text-white p-2 outline-none focus:border-amber-accent">
+                        <option value="" disabled selected>-- Wybierz materiał --</option>
+                        {% for product in available_products %}
+                        <option value="{{ product.id }}" data-unit="{{ product.get_unit_display }}" data-cost="{{ product.cost_per_unit }}">
+                            {{ product.name }} (Stan: {{ product.current_stock }} {{ product.get_unit_display }})
+                        </option>
+                        {% endfor %}
+                    </select>
                 </div>
+
+                <div class="sm:col-span-3">
+                    <label class="block text-[10px] uppercase text-stone-500 mb-1">Ilość:</label>
+                    <input type="number" step="0.1" min="0.1" id="input-qty" placeholder="np. 30" required
+                           class="w-full bg-stone-950 border border-stone-800 text-white p-2 outline-none focus:border-amber-accent">
+                </div>
+
+                <div class="sm:col-span-2 flex items-end">
+                    <button type="submit" id="btn-submit-material"
+                            class="w-full bg-stone-800 hover:bg-stone-700 text-amber-accent font-bold p-2 uppercase transition border border-stone-700 cursor-pointer">
+                        + Dodaj
+                    </button>
+                </div>
+            </form>
+
+            <!-- Tabela zarejestrowanych pozycji -->
+            <div class="overflow-x-auto border border-stone-850 bg-stone-950">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-stone-900/60 text-stone-500 uppercase text-[10px] border-b border-stone-850">
+                        <tr>
+                            <th class="p-3">Materiał / Produkt</th>
+                            <th class="p-3">Zużyta ilość</th>
+                            <th class="p-3 text-right">Koszt jednostkowy</th>
+                            <th class="p-3 text-right">Koszt całkowity</th>
+                        </tr>
+                    </thead>
+                    <tbody id="materials-table-body" class="divide-y divide-stone-850 text-stone-300">
+                        {% for u in order.material_usages.all %}
+                        <tr id="usage-row-{{ u.id }}">
+                            <td class="p-3 font-bold text-white">{{ u.product.name }}</td>
+                            <td class="p-3">{{ u.quantity_used }} {{ u.product.get_unit_display }}</td>
+                            <td class="p-3 text-right text-stone-500">{{ u.unit_cost_snapshot }} PLN</td>
+                            <td class="p-3 text-right font-bold text-red-400 usage-cost-val" data-cost="{{ u.total_cost }}">{{ u.total_cost }} PLN</td>
+                        </tr>
+                        {% empty %}
+                        <tr id="empty-materials-row">
+                            <td colspan="4" class="p-6 text-center text-stone-600">Brak zarejestrowanych materiałów dla tego zlecenia.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
+
         </div>
+
     </div>
 
 </div>
+
+<script>
+    const orderTotalPrice = parseFloat("{{ order.price_total|default:'0.00' }}".replace(',', '.')) || 0.0;
+
+    function recalculateTotals() {
+        let totalCogs = 0.0;
+        document.querySelectorAll('.usage-cost-val').forEach(el => {
+            totalCogs += parseFloat(el.getAttribute('data-cost')) || 0.0;
+        });
+
+        const formattedCogs = totalCogs.toFixed(2);
+        document.getElementById('cogs-total-header').textContent = `${formattedCogs} PLN`;
+        document.getElementById('summary-cogs-value').textContent = `${formattedCogs} PLN`;
+
+        if (orderTotalPrice > 0) {
+            const margin = (orderTotalPrice - totalCogs).toFixed(2);
+            document.getElementById('summary-margin-value').textContent = `${margin} PLN`;
+        }
+    }
+
+    function handleMaterialSubmit(event) {
+        event.preventDefault();
+
+        const select = document.getElementById('select-product');
+        const qtyInput = document.getElementById('input-qty');
+        const submitBtn = document.getElementById('btn-submit-material');
+
+        const productId = select.value;
+        const quantity = qtyInput.value;
+
+        if (!productId || !quantity) return;
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = '...';
+
+        const formData = new FormData();
+        formData.append('product_id', productId);
+        formData.append('quantity', quantity);
+
+        fetch("{% url 'order_add_material' order.id %}", {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}"
+            },
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '+ Dodaj';
+
+            if (data.status === 'ok') {
+                const emptyRow = document.getElementById('empty-materials-row');
+                if (emptyRow) emptyRow.remove();
+
+                const tbody = document.getElementById('materials-table-body');
+                const row = document.createElement('tr');
+                row.id = `usage-row-${data.item.id}`;
+                row.className = "border-b border-stone-850 text-stone-300";
+                row.innerHTML = `
+                    <td class="p-3 font-bold text-white">${data.item.name}</td>
+                    <td class="p-3">${data.item.quantity} ${data.item.unit}</td>
+                    <td class="p-3 text-right text-stone-500">Auto</td>
+                    <td class="p-3 text-right font-bold text-red-400 usage-cost-val" data-cost="${data.item.cost}">${data.item.cost.toFixed(2)} PLN</td>
+                `;
+                tbody.appendChild(row);
+
+                qtyInput.value = '';
+                recalculateTotals();
+            } else {
+                alert("Błąd: " + data.message);
+            }
+        })
+        .catch(err => {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '+ Dodaj';
+            alert("Błąd połączenia: " + err);
+        });
+    }
+
+    // Pierwsze przeliczenie kosztów po załadowaniu drzewa DOM
+    document.addEventListener('DOMContentLoaded', recalculateTotals);
+</script>
 {% endblock %}

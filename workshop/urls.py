@@ -14,4 +14,5 @@ urlpatterns = [
     path('order/<int:order_id>/damage/add/', views.add_damage_point_view, name='order_damage_add'),
     path('damage/<int:point_id>/delete/', views.delete_damage_point_view, name='damage_point_delete'),
     path('order/<int:order_id>/generate-blueprint/', views.generate_ai_blueprint_view, name='generate_ai_blueprint'),
+    path('order/<int:order_id>/add-material/', views.add_material_usage_view, name='order_add_material'),
 ]
