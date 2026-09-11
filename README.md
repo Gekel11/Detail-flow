@@ -224,17 +224,13 @@ Mutacje statusu i anulowanie: **tylko POST + CSRF** (nie GET).
 
 ---
 
-## Screenshots (opcjonalnie do README na GitHubie)
+## Screenshots
 
-Dodaj 2–3 zrzuty do katalogu `docs/` i wstaw tutaj:
-
-```markdown
 ![Hala operacyjna](docs/dashboard.png)
-![Check-in / mapa uszkodzeń](docs/checkin.png)
-![Mailpit — mail gotowości](docs/mailpit.png)
-```
 
-Rekruterzy często otwierają README zanim uruchomią Dockera — screenshoty mocno pomagają.
+![Check-in / mapa uszkodzeń](docs/checkin.png)
+
+![Mailpit — podgląd maila gotowości](docs/mailpit.png)
 
 ---
 
