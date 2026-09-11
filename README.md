@@ -212,7 +212,7 @@ Mutacje statusu i anulowanie: **tylko POST + CSRF** (nie GET).
 
 ---
 
-## Decyzje techniczne (przydatne na rozmowie)
+## Decyzje techniczne
 
 - **MVT zamiast osobnego SPA** — szybsze MVP, jeden język na praktykach, pełny cykl request→template.
 - **Celery do maili** — UI nie blokuje się na SMTP; widać różnicę sync vs async.
