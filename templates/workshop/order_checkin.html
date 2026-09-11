@@ -273,11 +273,12 @@
 </dialog>
 
 <script>
+    // WAŻNE: nazwy pól JS = nazwy pól modelu Django (car_view, nie view_angle)
     let pointsData = [
         {% for p in order.damage_points.all %}
         {
             id: {{ p.id }},
-            view_angle: "{{ p.view_angle }}",
+            car_view: "{{ p.car_view }}",
             x: {{ p.x_pos }},
             y: {{ p.y_pos }},
             damage_type: "{{ p.damage_type }}",
@@ -491,7 +492,7 @@
             pin.className = "damage-pin absolute w-4 h-4 -ml-2 -mt-2 rounded-full border border-red-400 bg-red-600 flex items-center justify-center cursor-pointer hover:scale-125 transition shadow-md shadow-red-950";
             pin.style.left = `${p.x}%`;
             pin.style.top = `${p.y}%`;
-            pin.title = `[${p.view_angle}] ${p.type_label}: ${p.note}`;
+            pin.title = `[${p.car_view}] ${p.type_label}: ${p.note}`;
             pin.innerHTML = `<span class="text-[9px] text-white font-mono font-bold">!</span>`;
             pin.onclick = (e) => {
                 e.stopPropagation();
@@ -517,7 +518,7 @@
             li.innerHTML = `
                 <div>
                     <div class="flex items-center gap-1.5">
-                        <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 bg-stone-800 text-amber-accent">${p.view_angle}</span>
+                        <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 bg-stone-800 text-amber-accent">${p.car_view}</span>
                         <span class="text-red-400 font-bold">${p.type_label}</span>
                     </div>
                     <span class="text-[10px] text-stone-400 block mt-0.5">${p.note || 'Brak uwag'}</span>
@@ -568,7 +569,7 @@
                 "X-CSRFToken": "{{ csrf_token }}"
             },
             body: JSON.stringify({
-                view_angle: pendingPoint.zone,
+                car_view: pendingPoint.zone,
                 x: pendingPoint.x,
                 y: pendingPoint.y,
                 damage_type: type,
@@ -581,7 +582,7 @@
                 dialog.close();
                 pointsData.push({
                     id: data.id,
-                    view_angle: data.view_angle,
+                    car_view: data.car_view,
                     x: data.x,
                     y: data.y,
                     damage_type: data.type,

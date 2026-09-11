@@ -1,5 +1,7 @@
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
+from decimal import Decimal
+from django.core.validators import MinValueValidator
 
 
 class Customer(models.Model):
@@ -39,6 +41,7 @@ class ServiceOrder(models.Model):
         ('IN_PROGRESS', 'Rozpoczęte'),
         ('READY', 'Gotowe do wydania'),
         ('COMPLETED', 'Wydane'),
+        ('CANCELLED', 'Anulowane'),
     ]
 
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='orders', verbose_name="Pojazd")
@@ -51,13 +54,14 @@ class ServiceOrder(models.Model):
     scheduled_start = models.DateTimeField(default=timezone.now, verbose_name="Termin wjazdu na halę")
     completed_at = models.DateTimeField(null=True, blank=True, verbose_name="Data wydania pojazdu")
 
-    # Flagi sterujące logiką biznesową
+    # Flagi sterujące logiką biznesową — domyślnie False,
+    # żeby pranie tapicerki nie wymuszało pomiaru lakieru / certyfikatu ceramiki.
     requires_paint_inspection = models.BooleanField(
-        default=True,
+        default=False,
         verbose_name="Wymaga inspekcji i pomiaru powłoki lakierniczej (np. Korekta / One-Step)"
     )
     requires_coating_certificate = models.BooleanField(
-        default=True,
+        default=False,
         verbose_name="Obejmuje aplikację powłoki ceramicznej / certyfikat"
     )
 
@@ -175,8 +179,6 @@ class CarBlueprint(models.Model):
     def __str__(self):
         return f"Blueprint: {self.make} {self.model}"
 
-from decimal import Decimal
-from django.core.validators import MinValueValidator
 
 class ChemicalProduct(models.Model):
     """Produkt chemiczny / materiał w magazynie (np. powłoka ceramiczna, pad, pasta)"""
@@ -204,7 +206,7 @@ class ChemicalProduct(models.Model):
 
 
 class MaterialUsage(models.Model):
-    """Zarejestrowane zużycie materiału na konkretnym zleceniu"""
+    """Zarejestrowane zużycie materiału na konkretnym zleceniu."""
     order = models.ForeignKey(ServiceOrder, on_delete=models.CASCADE, related_name='material_usages')
     product = models.ForeignKey(ChemicalProduct, on_delete=models.PROTECT, related_name='usages')
     quantity_used = models.DecimalField(
@@ -223,13 +225,36 @@ class MaterialUsage(models.Model):
         return (self.quantity_used * self.unit_cost_snapshot).quantize(Decimal('0.01'))
 
     def save(self, *args, **kwargs):
+        """
+        Przy pierwszym zapisie:
+        1) zatrzaśnij cenę zakupu (historia COGS nie zmienia się, gdy później zmienisz cennik),
+        2) zdejmij ilość ze stanu magazynowego.
+
+        Widok powinien wołać to w transaction.atomic() + select_for_update(product).
+        """
+        creating = self.pk is None
         if not self.unit_cost_snapshot:
             self.unit_cost_snapshot = self.product.cost_per_unit
-        # Automatyczne zdjęcie ze stanu magazynowego przy pierwszym zapisie
-        if not self.pk:
-            self.product.current_stock = max(Decimal('0.00'), self.product.current_stock - self.quantity_used)
+
+        if creating:
+            # Nie clampujemy po cichu do 0 — brak towaru to błąd biznesowy.
+            if self.product.current_stock < self.quantity_used:
+                raise ValueError(
+                    f"Za mało '{self.product.name}' na stanie "
+                    f"({self.product.current_stock} < {self.quantity_used})."
+                )
+            self.product.current_stock -= self.quantity_used
             self.product.save(update_fields=['current_stock'])
+
         super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        """Usunięcie pozycji zwraca towar na półkę (odwrotność save)."""
+        with transaction.atomic():
+            product = ChemicalProduct.objects.select_for_update().get(pk=self.product_id)
+            product.current_stock += self.quantity_used
+            product.save(update_fields=['current_stock'])
+            super().delete(*args, **kwargs)
 
     class Meta:
         verbose_name = "Zużycie materiału"

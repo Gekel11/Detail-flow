@@ -161,24 +161,30 @@
             </tr>
         </thead>
         <tbody>
+            {% if inspection %}
             <tr>
                 <td>Maska silnika</td>
-                <td><strong>{{ cert.thickness_hood }} µm</strong></td>
-                <td>Drzwi lewe (przód/tył)</td>
-                <td><strong>{{ cert.thickness_doors_left }} µm</strong></td>
+                <td><strong>{{ inspection.thickness_hood }} µm</strong></td>
+                <td>Drzwi lewe (przód / tył)</td>
+                <td><strong>{{ inspection.thickness_doors_fl }} / {{ inspection.thickness_doors_rl }} µm</strong></td>
             </tr>
             <tr>
                 <td>Dach</td>
-                <td><strong>{{ cert.thickness_roof }} µm</strong></td>
-                <td>Drzwi prawe (przód/tył)</td>
-                <td><strong>{{ cert.thickness_doors_right }} µm</strong></td>
+                <td><strong>{{ inspection.thickness_roof }} µm</strong></td>
+                <td>Drzwi prawe (przód / tył)</td>
+                <td><strong>{{ inspection.thickness_doors_fr }} / {{ inspection.thickness_doors_rr }} µm</strong></td>
             </tr>
             <tr>
                 <td>Klapa bagażnika</td>
-                <td><strong>{{ cert.thickness_trunk }} µm</strong></td>
-                <td>Błotniki (L/P)</td>
-                <td><strong>{{ cert.thickness_fenders }} µm</strong></td>
+                <td><strong>{{ inspection.thickness_trunk }} µm</strong></td>
+                <td>Błotniki (przód / tył)</td>
+                <td><strong>{{ inspection.thickness_fenders_front }} / {{ inspection.thickness_fenders_rear }} µm</strong></td>
             </tr>
+            {% else %}
+            <tr>
+                <td colspan="4"><em>Brak protokołu pomiaru lakieru dla tego zlecenia.</em></td>
+            </tr>
+            {% endif %}
         </tbody>
     </table>
 

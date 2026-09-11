@@ -141,6 +141,8 @@
                             <span class="text-emerald-400 border border-emerald-900/60 bg-emerald-950/40 px-2 py-0.5 uppercase">Gotowy</span>
                         {% elif order.status == 'COMPLETED' %}
                             <span class="text-stone-500 border border-stone-800 px-2 py-0.5 uppercase">Wydano</span>
+                        {% elif order.status == 'CANCELLED' %}
+                            <span class="text-red-400 border border-red-900/60 px-2 py-0.5 uppercase">Anulowane</span>
                         {% endif %}
                     </td>
                     <td class="py-3.5 px-4 text-right">
@@ -150,15 +152,22 @@
                                 Wjedź na halę →
                             </a>
                         {% elif order.status == 'IN_PROGRESS' %}
-                            <a href="{% url 'order_update_status' order.id 'READY' %}"
-                               class="inline-block bg-amber-accent hover:bg-amber-accentHover text-stone-950 font-semibold px-3 py-1 font-mono text-[11px] uppercase tracking-wider transition">
-                                Gotowe →
-                            </a>
+                            {# Mutacja statusu = FORM POST, nie <a href> #}
+                            <form method="post" action="{% url 'order_update_status' order.id 'READY' %}" class="inline">
+                                {% csrf_token %}
+                                <button type="submit"
+                                        class="inline-block bg-amber-accent hover:bg-amber-accentHover text-stone-950 font-semibold px-3 py-1 font-mono text-[11px] uppercase tracking-wider transition cursor-pointer">
+                                    Gotowe →
+                                </button>
+                            </form>
                         {% elif order.status == 'READY' %}
-                            <a href="{% url 'order_update_status' order.id 'COMPLETED' %}"
-                               class="inline-block border border-stone-700 hover:border-white text-stone-300 hover:text-white px-3 py-1 font-mono text-[11px] uppercase tracking-wider transition">
-                                Wydaj ✓
-                            </a>
+                            <form method="post" action="{% url 'order_update_status' order.id 'COMPLETED' %}" class="inline">
+                                {% csrf_token %}
+                                <button type="submit"
+                                        class="inline-block border border-stone-700 hover:border-white text-stone-300 hover:text-white px-3 py-1 font-mono text-[11px] uppercase tracking-wider transition cursor-pointer">
+                                    Wydaj ✓
+                                </button>
+                            </form>
                         {% else %}
                             <a href="{% url 'order_detail' order.id %}" class="inline-block border border-stone-800 hover:border-stone-600 text-stone-400 hover:text-stone-200 px-2.5 py-1 font-mono text-[11px] uppercase transition">
                                 Karta zlecenia ↗

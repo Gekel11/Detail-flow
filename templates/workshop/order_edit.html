@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block title %}Edycja zlecenia #{{ order.id|stringformat:"03d" }} — DetailFlow{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="border-b border-stone-800 pb-4 mb-6 flex justify-between items-end">
+        <div>
+            <p class="text-xs font-mono uppercase tracking-widest text-amber-accent">// KOREKTA DANYCH ZLECENIA</p>
+            <h1 class="text-2xl font-display font-bold uppercase tracking-tight text-white mt-1">
+                Edycja #{{ order.id|stringformat:"03d" }}
+            </h1>
+            <p class="text-xs font-mono text-stone-500 mt-1">
+                {{ order.vehicle.make }} {{ order.vehicle.model }} · {{ order.vehicle.license_plate }} ·
+                status: {{ order.get_status_display }}
+            </p>
+        </div>
+        <a href="{% url 'order_detail' order.id %}" class="text-xs font-mono text-stone-500 hover:text-stone-300 uppercase">
+            ← Wróć do karty
+        </a>
+    </div>
+
+    <div class="border border-stone-800 bg-stone-900 p-6 sm:p-8">
+        <form method="POST" class="space-y-6" novalidate>
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="p-3 border border-red-900 bg-red-950/40 text-red-300 text-xs font-mono">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            <div class="border-b border-stone-800/80 pb-6">
+                <label for="{{ form.vehicle.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300 mb-2">
+                    01. Pojazd *
+                </label>
+                {{ form.vehicle }}
+                {% if form.vehicle.errors %}
+                    <p class="text-xs font-mono text-red-400 mt-1">{{ form.vehicle.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label for="{{ form.service_name.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300 mb-2">
+                        02. Pakiet detailingowy *
+                    </label>
+                    {{ form.service_name }}
+                    {% if form.service_name.errors %}
+                        <p class="text-xs font-mono text-red-400 mt-1">{{ form.service_name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="border border-stone-800 bg-stone-950 p-4 space-y-3">
+                    <p class="text-xs font-mono uppercase text-amber-accent tracking-wider">// PROCEDURY TECHNICZNE</p>
+                    <div class="flex items-start gap-3">
+                        <div class="pt-0.5">{{ form.requires_paint_inspection }}</div>
+                        <label for="{{ form.requires_paint_inspection.id_for_label }}" class="text-xs font-mono text-stone-200 cursor-pointer font-semibold">
+                            Wymaga inspekcji powłoki lakierniczej
+                        </label>
+                    </div>
+                    <div class="flex items-start gap-3 pt-2 border-t border-stone-900">
+                        <div class="pt-0.5">{{ form.requires_coating_certificate }}</div>
+                        <label for="{{ form.requires_coating_certificate.id_for_label }}" class="text-xs font-mono text-stone-200 cursor-pointer font-semibold">
+                            Certyfikat powłoki ochronnej
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="{{ form.description.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300 mb-2">
+                        03. Uwagi techniczne
+                    </label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                        <p class="text-xs font-mono text-red-400 mt-1">{{ form.description.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-stone-800/80 pt-6">
+                <div>
+                    <label for="{{ form.price_total.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300 mb-2">
+                        Wycena (PLN) *
+                    </label>
+                    {{ form.price_total }}
+                    {% if form.price_total.errors %}
+                        <p class="text-xs font-mono text-red-400 mt-1">{{ form.price_total.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div>
+                    <label for="{{ form.deposit_paid.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300 mb-2">
+                        Zadatek (PLN)
+                    </label>
+                    {{ form.deposit_paid }}
+                    {% if form.deposit_paid.errors %}
+                        <p class="text-xs font-mono text-red-400 mt-1">{{ form.deposit_paid.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div>
+                <label for="{{ form.scheduled_start.id_for_label }}" class="block text-xs font-mono uppercase tracking-wider text-stone-300 mb-2">
+                    Termin wjazdu na halę
+                </label>
+                {{ form.scheduled_start }}
+                {% if form.scheduled_start.errors %}
+                    <p class="text-xs font-mono text-red-400 mt-1">{{ form.scheduled_start.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div class="flex items-center justify-between pt-6 border-t border-stone-800">
+                <a href="{% url 'order_detail' order.id %}" class="text-xs font-mono text-stone-500 hover:text-stone-300 uppercase tracking-wider">
+                    ← Anuluj zmiany
+                </a>
+                <button type="submit" class="bg-amber-accent hover:bg-amber-accentHover text-stone-950 font-display font-bold text-xs uppercase tracking-wider px-6 py-3 transition">
+                    Zapisz zmiany
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

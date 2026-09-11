@@ -1,4 +1,5 @@
 from celery import shared_task
+from django.conf import settings
 from django.core.mail import EmailMessage, send_mail
 from django.utils import timezone
 from .models import ServiceOrder
@@ -14,13 +15,18 @@ def send_vehicle_ready_notification(order_id):
     subject = f"Twój pojazd {order.vehicle.make} {order.vehicle.model} jest gotowy do odbioru! – DetailFlow"
 
     cert_info = ""
-    if order.requires_coating_certificate and hasattr(order, 'coating_certificate'):
-        cert = order.coating_certificate
-        cert_info = f"\nZabezpieczenie lakieru: {cert.coating_product} (Gwarancja: {cert.warranty_months} mies.)\nOficjalny certyfikat załączono do niniejszej wiadomości w pliku PDF.\n"
+    certificate = getattr(order, 'coating_certificate', None)
+    if order.requires_coating_certificate and certificate is not None:
+        cert_info = (
+            f"\nZabezpieczenie lakieru: {certificate.coating_product} "
+            f"(Gwarancja: {certificate.warranty_months} mies.)\n"
+            f"Oficjalny certyfikat załączono do niniejszej wiadomości w pliku PDF.\n"
+        )
 
     body = (
         f"Cześć {customer.first_name},\n\n"
-        f"Prace nad Twoim autem ({order.vehicle.make} {order.vehicle.model}, rej. {order.vehicle.license_plate}) dobiegły końca!\n"
+        f"Prace nad Twoim autem ({order.vehicle.make} {order.vehicle.model}, "
+        f"rej. {order.vehicle.license_plate}) dobiegły końca!\n"
         f"Pakiet: {order.service_name}\n"
         f"{cert_info}\n"
         f"--- PODSUMOWANIE FINANSOWE ---\n"
@@ -34,18 +40,17 @@ def send_vehicle_ready_notification(order_id):
     email = EmailMessage(
         subject=subject,
         body=body,
-        from_email="studio@detailflow.pl",
+        from_email=settings.DEFAULT_FROM_EMAIL,
         to=[customer.email],
     )
 
-    # Dołącz PDF tylko, jeśli zlecenie obejmuje ceramikę i certyfikat istnieje!
-    if order.requires_coating_certificate and hasattr(order, 'coating_certificate'):
+    if order.requires_coating_certificate and certificate is not None:
         try:
-            pdf_bytes = generate_coating_certificate_pdf(order.coating_certificate)
+            pdf_bytes = generate_coating_certificate_pdf(certificate)
             filename = f"Certyfikat_{order.vehicle.license_plate}.pdf"
             email.attach(filename, pdf_bytes, 'application/pdf')
-        except Exception as e:
-            print(f"Błąd generowania PDF: {e}")
+        except Exception as exc:
+            print(f"Błąd generowania PDF: {exc}")
 
     email.send(fail_silently=False)
     return f"Wysłano powiadomienie dla zlecenia #{order.id}"
@@ -53,11 +58,11 @@ def send_vehicle_ready_notification(order_id):
 
 @shared_task
 def send_evening_thank_you_discounts():
-    """Wysyła maila z podziękowaniem i kodem -10% dla aut wydanych dzisiaj"""
-    today = timezone.now().date()
+    """Wysyła maila z podziękowaniem i kodem -10% dla aut wydanych dzisiaj."""
+    today = timezone.localdate()
     completed_today_orders = ServiceOrder.objects.filter(
         status='COMPLETED',
-        updated_at__date=today
+        completed_at__date=today,
     ).select_related('vehicle__owner')
 
     for order in completed_today_orders:
@@ -65,14 +70,16 @@ def send_evening_thank_you_discounts():
         subject = "Dziękujemy za wizytę w DetailFlow! Mamy dla Ciebie prezent"
         message = (
             f"Dzień dobry {customer.first_name},\n\n"
-            f"Dziękujemy za zaufanie i powierzenie nam swojego {order.vehicle.make} {order.vehicle.model}.\n"
-            f"W ramach podziękowania przygotowaliśmy kod rabatowy -10% na kolejną wizytę: DETAIL10\n\n"
+            f"Dziękujemy za zaufanie i powierzenie nam swojego "
+            f"{order.vehicle.make} {order.vehicle.model}.\n"
+            f"W ramach podziękowania przygotowaliśmy kod rabatowy -10% "
+            f"na kolejną wizytę: DETAIL10\n\n"
             f"Do zobaczenia!\nZespół DetailFlow"
         )
         send_mail(
             subject=subject,
             message=message,
-            from_email="studio@detailflow.pl",
+            from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[customer.email],
             fail_silently=True,
         )

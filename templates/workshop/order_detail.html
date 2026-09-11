@@ -20,18 +20,44 @@
             <p class="text-xs font-mono text-stone-400 mt-1">
                 Nr rej: <span class="text-amber-accent font-bold">{{ order.vehicle.license_plate }}</span> ·
                 Klient: <span class="text-white">{{ order.vehicle.owner.first_name }} {{ order.vehicle.owner.last_name }}</span> ·
-                Telefon: <span class="text-stone-300">{{ order.vehicle.owner.phone_number|default:"Brak" }}</span>
+                Telefon: <span class="text-stone-300">{{ order.vehicle.owner.phone|default:"Brak" }}</span>
             </p>
         </div>
 
-        <div class="flex items-center gap-3">
+        <!-- Prawa sekcja akcji -->
+        <div class="flex flex-wrap items-center gap-2 justify-end">
+            <a href="{% url 'order_edit' order.id %}"
+               class="inline-flex items-center gap-2 bg-stone-900 hover:bg-stone-850 text-stone-200 border border-stone-700 px-3 py-2 text-xs font-mono uppercase transition">
+                ✎ Edytuj dane
+            </a>
+
+            {% if order.status != 'CANCELLED' and order.status != 'COMPLETED' %}
+            <form method="post" action="{% url 'order_cancel' order.id %}"
+                  onsubmit="return confirm('Na pewno anulować zlecenie #{{ order.id }}?');"
+                  class="inline">
+                {% csrf_token %}
+                <button type="submit"
+                        class="inline-flex items-center gap-2 border border-red-900/70 bg-red-950/40 hover:bg-red-950/70 text-red-300 px-3 py-2 text-xs font-mono uppercase transition cursor-pointer">
+                    Anuluj zlecenie
+                </button>
+            </form>
+            {% endif %}
+
+            {% if order.requires_coating_certificate %}
+                <a href="{% url 'order_certificate_pdf' order.id %}"
+                   target="_blank"
+                   class="inline-flex items-center gap-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/40 px-3 py-2 text-xs font-mono transition">
+                    <span>CERTYFIKAT PDF</span>
+                </a>
+            {% endif %}
+
             <a href="{% url 'order_checkin' order.id %}"
-               class="bg-stone-900 hover:bg-stone-850 text-stone-300 border border-stone-700 px-4 py-2 text-xs font-mono uppercase transition flex items-center gap-2">
-                <span>🔍 Inspekcja wjazdowa / Mapa</span>
+               class="bg-stone-900 hover:bg-stone-850 text-stone-300 border border-stone-700 px-3 py-2 text-xs font-mono uppercase transition">
+                Inspekcja / Mapa
             </a>
             <a href="{% url 'dashboard' %}"
                class="text-xs font-mono text-stone-500 hover:text-stone-300 uppercase px-2 py-2">
-                ← Powrót do hali
+                ← Hala
             </a>
         </div>
     </div>
@@ -78,11 +104,11 @@
                     </li>
                     <li class="flex justify-between">
                         <span>Średnia grubość (maska):</span>
-                        <span class="text-stone-200 font-bold">{{ order.thickness_hood|default:"N/D" }} µm</span>
+                        <span class="text-stone-200 font-bold">{% if inspection %}{{ inspection.thickness_hood }}{% else %}N/D{% endif %} µm</span>
                     </li>
                     <li class="flex justify-between">
                         <span>Średnia grubość (dach):</span>
-                        <span class="text-stone-200 font-bold">{{ order.thickness_roof|default:"N/D" }} µm</span>
+                        <span class="text-stone-200 font-bold">{% if inspection %}{{ inspection.thickness_roof }}{% else %}N/D{% endif %} µm</span>
                     </li>
                 </ul>
             </div>
@@ -228,7 +254,7 @@
                     <td class="p-3 font-bold text-white">${data.item.name}</td>
                     <td class="p-3">${data.item.quantity} ${data.item.unit}</td>
                     <td class="p-3 text-right text-stone-500">Auto</td>
-                    <td class="p-3 text-right font-bold text-red-400 usage-cost-val" data-cost="${data.item.cost}">${data.item.cost.toFixed(2)} PLN</td>
+                    <td class="p-3 text-right font-bold text-red-400 usage-cost-val" data-cost="${data.item.cost}">${Number(data.item.cost).toFixed(2)} PLN</td>
                 `;
                 tbody.appendChild(row);
 

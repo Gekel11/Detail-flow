@@ -33,7 +33,7 @@ class ServiceOrderForm(forms.ModelForm):
     class Meta:
         model = ServiceOrder
         fields = [
-            'vehicle', 'service_name', 'description', 
+            'vehicle', 'service_name', 'description',
             'requires_paint_inspection', 'requires_coating_certificate',
             'price_total', 'deposit_paid', 'scheduled_start'
         ]
@@ -47,6 +47,18 @@ class ServiceOrderForm(forms.ModelForm):
             'deposit_paid': forms.NumberInput(attrs={'class': INPUT_STYLE, 'placeholder': '0.00'}),
             'scheduled_start': forms.DateTimeInput(attrs={'class': INPUT_STYLE, 'type': 'datetime-local'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # datetime-local potrzebuje formatu bez strefy: 2026-09-12T09:00
+        self.fields['scheduled_start'].input_formats = [
+            '%Y-%m-%dT%H:%M',
+            '%Y-%m-%d %H:%M:%S',
+            '%Y-%m-%d %H:%M',
+        ]
+        if self.instance and self.instance.pk and self.instance.scheduled_start:
+            self.initial['scheduled_start'] = self.instance.scheduled_start.strftime('%Y-%m-%dT%H:%M')
+
 
 class PaintInspectionForm(forms.ModelForm):
     class Meta:

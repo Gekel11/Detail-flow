@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}Logowanie — DetailFlow{% endblock %}
+
+{% block content %}
+{#
+  Prosty formularz logowania.
+  Django LoginView oczekuje pól: username, password + csrf_token.
+  Po sukcesie wraca na LOGIN_REDIRECT_URL (dashboard).
+#}
+<div class="max-w-md mx-auto border border-stone-800 bg-stone-900 p-8">
+    <p class="text-xs font-mono uppercase tracking-widest text-amber-accent mb-2">// DOSTĘP DO HALI</p>
+    <h1 class="text-xl font-display font-bold text-white uppercase mb-6">Logowanie operatora</h1>
+
+    {% if form.errors %}
+        <div class="mb-4 border border-red-900/60 bg-red-950/40 text-red-300 text-xs font-mono p-3">
+            Nieprawidłowy login lub hasło.
+        </div>
+    {% endif %}
+
+    <form method="post" class="space-y-4">
+        {% csrf_token %}
+        <div>
+            <label class="block text-[11px] font-mono uppercase text-stone-500 mb-1" for="id_username">Użytkownik</label>
+            <input type="text" name="username" id="id_username" required autofocus
+                   class="w-full bg-stone-950 border border-stone-800 focus:border-amber-accent text-white font-mono text-xs px-3 py-2 outline-none">
+        </div>
+        <div>
+            <label class="block text-[11px] font-mono uppercase text-stone-500 mb-1" for="id_password">Hasło</label>
+            <input type="password" name="password" id="id_password" required
+                   class="w-full bg-stone-950 border border-stone-800 focus:border-amber-accent text-white font-mono text-xs px-3 py-2 outline-none">
+        </div>
+        <button type="submit"
+                class="w-full bg-amber-accent hover:bg-amber-accentHover text-stone-950 font-display font-semibold text-xs tracking-wider uppercase px-4 py-3 transition">
+            Wejdź na halę →
+        </button>
+    </form>
+
+    <p class="mt-6 text-[11px] font-mono text-stone-500">
+        Konto tworzysz przez:
+        <code class="text-stone-300">docker compose exec web python manage.py createsuperuser</code>
+    </p>
+</div>
+{% endblock %}
