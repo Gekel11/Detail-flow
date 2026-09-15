@@ -136,11 +136,10 @@ Po zmianach w `tasks.py`: `docker compose restart worker`
 
 - Dev stack (`runserver`, hasła w compose).
 - Jedna rola operatora (+ admin).
-- `inventory` / `reports` — placeholdery.
-- Część paczek w `requirements.txt` (Stripe, pandas) — pod przyszłą rozbudowę.
+- `inventory` / `reports` — placeholdery pod przyszłą rozbudowę.
 
 ---
 
 ## Autor
-
+Mateusz Gałda
 Projekt praktyk studenckich — DetailFlow Workshop OS (Django, Docker, Celery, PostgreSQL).
