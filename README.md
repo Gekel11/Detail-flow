@@ -39,7 +39,7 @@ Django **MVT** + PostgreSQL + Redis/Celery + Tailwind (CDN). Aplikacja prowadzi 
 **Wymagania:** [Docker Desktop](https://www.docker.com/products/docker-desktop/), wolne porty **8000, 8025, 5555**.
 
 ```bash
-git clone <URL-TWOJEGO-REPO>.git
+git clone https://github.com/Gekel11/Detail-flow.git
 cd Detail-flow          # nazwa katalogu po clone
 docker compose up --build
 ```
